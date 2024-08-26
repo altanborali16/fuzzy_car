@@ -1,7 +1,8 @@
-using System;
+﻿using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using TMPro;
 
 public class CarController : MonoBehaviour
 {
@@ -30,6 +31,15 @@ public class CarController : MonoBehaviour
     [SerializeField] private Transform rearLeftWheelTransform;
     [SerializeField] private Transform rearRightWheelTransform;
 
+    [SerializeField] private TextMeshProUGUI speedometerText; // Text UI element to display speed
+    [SerializeField] private TextMeshProUGUI accelerationText; // Text UI element to display speed
+    [SerializeField] private float accelerationRate = 5f; // Rate at which the car speeds up
+    [SerializeField] private float maxSpeed = 15f; // Maximum speed in km/h
+    private float currentSpeed;
+    private float previousSpeed;
+    private float currentAcceleration;
+    private bool isAccelerating = false;
+
     private void Awake()
     {
         rb = GetComponent<Rigidbody>();
@@ -52,6 +62,8 @@ public class CarController : MonoBehaviour
         HandleMotor();
         HandleSteering();
         UpdateWheels();
+        CalculateAcceleration();
+        DisplaySpeedAndAcceleration();
     }
 
     private void GetInput()
@@ -59,6 +71,17 @@ public class CarController : MonoBehaviour
         horizontalInput = Input.GetAxis(HORIZONTAL);
         verticalInput = Input.GetAxis(VERTICAL);
         isBreaking = Input.GetKey(KeyCode.Space);
+        // Automatically increase speed when a button is pressed (e.g., Left Shift)
+        if (Input.GetKeyDown(KeyCode.F))
+        {
+            print("Oto Hız Sistemi açıldı");
+            isAccelerating = true;
+        }
+        if (Input.GetKeyDown(KeyCode.G))
+        {
+            print("Oto Hız Sistemi kapatıldı");
+            isAccelerating = false;
+        }
     }
 
     public void StopCar()
@@ -86,8 +109,17 @@ public class CarController : MonoBehaviour
 
     private void HandleMotor()
     {
-        frontLeftWheelCollider.motorTorque = verticalInput * motorForce;
-        frontRightWheelCollider.motorTorque = verticalInput * motorForce;
+        if (isAccelerating)
+        {
+            //print("Increase speed e girdi");
+            IncreaseSpeed();
+        }
+        else
+        {
+            frontLeftWheelCollider.motorTorque = verticalInput * motorForce;
+            frontRightWheelCollider.motorTorque = verticalInput * motorForce;
+        }
+
         currentbreakForce = isBreaking ? breakForce : 0f;
         ApplyBreaking();
     }
@@ -122,5 +154,47 @@ public class CarController : MonoBehaviour
         wheelCollider.GetWorldPose(out pos, out rot);
         wheelTransform.rotation = rot;
         wheelTransform.position = pos;
+    }
+
+    private void IncreaseSpeed()
+    {
+        if (isAccelerating)
+        {
+            // Calculate the target speed in m/s
+            float targetSpeedInMetersPerSecond = maxSpeed / 3.6f;
+
+            // If the car's current speed is less than the target speed
+            if (rb.velocity.magnitude < targetSpeedInMetersPerSecond)
+            {
+                print("Oto Gaz açık");
+                // Gradually increase the motor torque to accelerate
+                frontLeftWheelCollider.motorTorque += accelerationRate * Time.deltaTime;
+                frontRightWheelCollider.motorTorque += accelerationRate * Time.deltaTime;
+            }
+            else
+            {
+                // Stop further acceleration if the target speed is reached
+                //isAccelerating = false;
+                print("Oto Gaz kapalı");
+                verticalInput = 0f;
+                frontLeftWheelCollider.motorTorque = verticalInput * motorForce;
+                frontRightWheelCollider.motorTorque = verticalInput * motorForce;
+            }
+        }
+    }
+
+    private void CalculateAcceleration()
+    {
+        // Acceleration is the change in speed (velocity) over time
+        float currentVelocity = rb.velocity.magnitude; // in meters per second (m/s)
+        currentAcceleration = (currentVelocity - previousSpeed) / Time.fixedDeltaTime; // m/s²
+        previousSpeed = currentVelocity;
+    }
+
+    private void DisplaySpeedAndAcceleration()
+    {
+        float speed = rb.velocity.magnitude * 3.6f; // Convert m/s to km/h
+        speedometerText.text = $"Speed: {speed:0} km/h";
+        accelerationText.text = $"Acceleration: {currentAcceleration:0.00} m/s²";
     }
 }
