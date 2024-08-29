@@ -33,8 +33,12 @@ public class CarController : MonoBehaviour
 
     [SerializeField] private TextMeshProUGUI speedometerText; // Text UI element to display speed
     [SerializeField] private TextMeshProUGUI accelerationText; // Text UI element to display speed
-    [SerializeField] private float accelerationRate = 5f; // Rate at which the car speeds up
+    [SerializeField] private TextMeshProUGUI distanceText; // Text UI element to display distance with fron car
+    [SerializeField] private float accelerationRate = 200f; // Rate at which the car speeds up
     [SerializeField] private float maxSpeed = 15f; // Maximum speed in km/h
+
+    public GameObject frontCar;
+
     private float currentSpeed;
     private float previousSpeed;
     private float currentAcceleration;
@@ -64,6 +68,7 @@ public class CarController : MonoBehaviour
         UpdateWheels();
         CalculateAcceleration();
         DisplaySpeedAndAcceleration();
+        CalculateDistance();
     }
 
     private void GetInput()
@@ -118,6 +123,7 @@ public class CarController : MonoBehaviour
         {
             frontLeftWheelCollider.motorTorque = verticalInput * motorForce;
             frontRightWheelCollider.motorTorque = verticalInput * motorForce;
+            //print("Vertical input : " + verticalInput + " -- Motor Torque : " + verticalInput * motorForce);
         }
 
         currentbreakForce = isBreaking ? breakForce : 0f;
@@ -168,8 +174,9 @@ public class CarController : MonoBehaviour
             {
                 print("Oto Gaz açık");
                 // Gradually increase the motor torque to accelerate
-                frontLeftWheelCollider.motorTorque += accelerationRate * Time.deltaTime;
-                frontRightWheelCollider.motorTorque += accelerationRate * Time.deltaTime;
+                frontLeftWheelCollider.motorTorque += accelerationRate * Time.fixedDeltaTime;
+                frontRightWheelCollider.motorTorque += accelerationRate * Time.fixedDeltaTime;
+                //print("Time.deltaTime : " + Time.deltaTime + " -- Motor Torque : " + accelerationRate * Time.deltaTime);
             }
             else
             {
@@ -196,5 +203,16 @@ public class CarController : MonoBehaviour
         float speed = rb.velocity.magnitude * 3.6f; // Convert m/s to km/h
         speedometerText.text = $"Speed: {speed:0} km/h";
         accelerationText.text = $"Acceleration: {currentAcceleration:0.00} m/s²";
+    }
+    private void CalculateDistance()
+    {
+        if (frontCar != null)
+        {
+            double zDifference = System.Math.Abs((double)transform.position.z - (double)frontCar.transform.position.z); // car is 4.34
+            zDifference = zDifference - 4.34;
+            zDifference = System.Math.Round(zDifference, 2);
+            //Debug.Log("Distance to other object: " + distance + " meters");
+            distanceText.text = zDifference + " meters";
+        }
     }
 }
