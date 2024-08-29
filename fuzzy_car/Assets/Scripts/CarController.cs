@@ -39,7 +39,15 @@ public class CarController : MonoBehaviour
 
     public GameObject frontCar;
 
-    private float currentSpeed;
+    // For lane change
+    private bool isChangingLane = false;
+    private float targetLanePosition = -2.43f; // The target X position for the lane change
+    private float laneChangeSteeringAngle = 30f; // Adjust the steering angle for lane change
+    private float laneWidth = 3.0f; // Adjust the lane width as needed
+    //private float laneChangeSpeed = 5f; // The speed of lane change
+    private float steeringSpeed = 5f; // Speed at which the steering angle changes
+
+    //private float currentSpeed;
     private float previousSpeed;
     private float currentAcceleration;
     private bool isAccelerating = false;
@@ -64,11 +72,13 @@ public class CarController : MonoBehaviour
 
         GetInput();
         HandleMotor();
-        HandleSteering();
+        //HandleSteering();
         UpdateWheels();
         CalculateAcceleration();
         DisplaySpeedAndAcceleration();
         CalculateDistance();
+        if(isChangingLane)
+            ChangeLane();
     }
 
     private void GetInput()
@@ -183,6 +193,7 @@ public class CarController : MonoBehaviour
                 // Stop further acceleration if the target speed is reached
                 //isAccelerating = false;
                 print("Oto Gaz kapalı");
+                StartLaneChange(-1);
                 verticalInput = 0f;
                 frontLeftWheelCollider.motorTorque = verticalInput * motorForce;
                 frontRightWheelCollider.motorTorque = verticalInput * motorForce;
@@ -214,5 +225,50 @@ public class CarController : MonoBehaviour
             //Debug.Log("Distance to other object: " + distance + " meters");
             distanceText.text = zDifference + " meters";
         }
+    }
+    private void StartLaneChange(int direction)
+    {
+        print("StartLaneChange");
+        isChangingLane = true;
+        targetLanePosition = transform.position.x + (direction * laneWidth);
+        currentSteerAngle = maxSteerAngle * direction; // Set the steering angle in the direction of the lane change
+    }
+    private void ChangeLane()
+    {
+        //float currentXPosition = transform.position.x;
+        //float newXPosition = Mathf.Lerp(currentXPosition, targetLanePosition, laneChangeSpeed);
+        //horizontalInput = Mathf.Clamp(newXPosition - currentXPosition, -1, 1);
+
+        //if (Mathf.Abs(newXPosition - targetLanePosition) < 0.1f)
+        //{
+        //    isChangingLane = false;
+        //}
+        //Vector3 newPosition = transform.position;
+        //newPosition.x = Mathf.MoveTowards(transform.position.x, targetLanePosition, laneChangeSpeed * Time.deltaTime);
+
+        //transform.position = newPosition;
+
+        //if (Mathf.Approximately(transform.position.x, targetLanePosition))
+        //{
+        //    isChangingLane = false; // Lane change completed
+        //}
+        print("ChangeLane");
+        float currentXPosition = transform.position.x;
+
+        // Gradually apply steering angle
+        float newSteeringAngle = Mathf.Lerp(currentSteerAngle, 0f, Time.deltaTime * steeringSpeed);
+        currentSteerAngle = newSteeringAngle;
+
+        // Apply the steering angle to the front wheels
+        frontLeftWheelCollider.steerAngle = currentSteerAngle;
+        frontRightWheelCollider.steerAngle = currentSteerAngle;
+
+        // Check if the car has reached the target lane position
+        if (Mathf.Abs(currentXPosition - targetLanePosition) < 0.1f)
+        {
+            isChangingLane = false;
+            currentSteerAngle = 0f; // Reset steering angle when lane change is complete
+        }
+
     }
 }
