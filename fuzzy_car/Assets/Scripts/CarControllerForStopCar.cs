@@ -71,12 +71,12 @@ public class CarControllerForStopCar : MonoBehaviour
         // Automatically increase speed when a button is pressed (e.g., Left Shift)
         if (Input.GetKeyDown(KeyCode.F))
         {
-            print("Oto Hız Sistemi açıldı Stop Car");
+            //print("Oto Hız Sistemi açıldı Stop Car");
             isAccelerating = true;
         }
         if (Input.GetKeyDown(KeyCode.G))
         {
-            print("Oto Hız Sistemi kapatıldı");
+            //print("Oto Hız Sistemi kapatıldı");
             isAccelerating = false;
         }
     }
@@ -166,7 +166,7 @@ public class CarControllerForStopCar : MonoBehaviour
             // If the car's current speed is less than the target speed
             if (rb.velocity.magnitude < targetSpeedInMetersPerSecond)
             {
-                print("Oto Gaz açık Stop Car");
+                //print("Oto Gaz açık Stop Car");
                 // Gradually increase the motor torque to accelerate
                 frontLeftWheelCollider.motorTorque += accelerationRate * Time.deltaTime;
                 frontRightWheelCollider.motorTorque += accelerationRate * Time.deltaTime;
@@ -176,7 +176,7 @@ public class CarControllerForStopCar : MonoBehaviour
             {
                 // Stop further acceleration if the target speed is reached
                 isAccelerating = false;
-                print("Oto Gaz kapalı Stop Car");
+                //print("Oto Gaz kapalı Stop Car");
                 verticalInput = 0f;
                 frontLeftWheelCollider.motorTorque = verticalInput * motorForce;
                 frontRightWheelCollider.motorTorque = verticalInput * motorForce;

@@ -38,11 +38,14 @@ public class CarController : MonoBehaviour
     [SerializeField] private float maxSpeed = 15f; // Maximum speed in km/h
 
     public GameObject frontCar;
+    public Transform frontPosition;
 
     // For lane change
     private bool isChangingLane = false;
-    private float targetLanePosition = -2.43f; // The target X position for the lane change
-    private float laneChangeSteeringAngle = 30f; // Adjust the steering angle for lane change
+    private bool isLaneChangeDoneBefore = false;
+    private float targetLanePosition = 2.43f; // The target X position for the lane change
+    private float targetSteeringAngle = 0f; // The target X position for the lane change
+    //private float laneChangeSteeringAngle = 30f; // Adjust the steering angle for lane change
     private float laneWidth = 3.0f; // Adjust the lane width as needed
     //private float laneChangeSpeed = 5f; // The speed of lane change
     private float steeringSpeed = 5f; // Speed at which the steering angle changes
@@ -77,8 +80,7 @@ public class CarController : MonoBehaviour
         CalculateAcceleration();
         DisplaySpeedAndAcceleration();
         CalculateDistance();
-        if(isChangingLane)
-            ChangeLane();
+        ChangeLane();
     }
 
     private void GetInput()
@@ -89,12 +91,12 @@ public class CarController : MonoBehaviour
         // Automatically increase speed when a button is pressed (e.g., Left Shift)
         if (Input.GetKeyDown(KeyCode.F))
         {
-            print("Oto Hız Sistemi açıldı");
+            //print("Oto Hız Sistemi açıldı");
             isAccelerating = true;
         }
         if (Input.GetKeyDown(KeyCode.G))
         {
-            print("Oto Hız Sistemi kapatıldı");
+            //print("Oto Hız Sistemi kapatıldı");
             isAccelerating = false;
         }
     }
@@ -182,7 +184,7 @@ public class CarController : MonoBehaviour
             // If the car's current speed is less than the target speed
             if (rb.velocity.magnitude < targetSpeedInMetersPerSecond)
             {
-                print("Oto Gaz açık");
+                //print("Oto Gaz açık");
                 // Gradually increase the motor torque to accelerate
                 frontLeftWheelCollider.motorTorque += accelerationRate * Time.fixedDeltaTime;
                 frontRightWheelCollider.motorTorque += accelerationRate * Time.fixedDeltaTime;
@@ -192,7 +194,7 @@ public class CarController : MonoBehaviour
             {
                 // Stop further acceleration if the target speed is reached
                 //isAccelerating = false;
-                print("Oto Gaz kapalı");
+                //print("Oto Gaz kapalı");
                 StartLaneChange(-1);
                 verticalInput = 0f;
                 frontLeftWheelCollider.motorTorque = verticalInput * motorForce;
@@ -228,46 +230,74 @@ public class CarController : MonoBehaviour
     }
     private void StartLaneChange(int direction)
     {
-        print("StartLaneChange");
-        isChangingLane = true;
-        targetLanePosition = transform.position.x + (direction * laneWidth);
-        currentSteerAngle = maxSteerAngle * direction; // Set the steering angle in the direction of the lane change
+        if (!isLaneChangeDoneBefore)
+        {
+            isLaneChangeDoneBefore = true;
+            isChangingLane = true;
+            targetLanePosition = frontPosition.position.x + (direction * 2.43f); // Adjust target based on front position
+            targetSteeringAngle = maxSteerAngle * direction; // Set the target steering angle for lane change
+        }
+
     }
     private void ChangeLane()
     {
-        //float currentXPosition = transform.position.x;
-        //float newXPosition = Mathf.Lerp(currentXPosition, targetLanePosition, laneChangeSpeed);
-        //horizontalInput = Mathf.Clamp(newXPosition - currentXPosition, -1, 1);
+        float frontXPosition = frontPosition.position.x;
 
-        //if (Mathf.Abs(newXPosition - targetLanePosition) < 0.1f)
-        //{
-        //    isChangingLane = false;
-        //}
-        //Vector3 newPosition = transform.position;
-        //newPosition.x = Mathf.MoveTowards(transform.position.x, targetLanePosition, laneChangeSpeed * Time.deltaTime);
-
-        //transform.position = newPosition;
-
-        //if (Mathf.Approximately(transform.position.x, targetLanePosition))
-        //{
-        //    isChangingLane = false; // Lane change completed
-        //}
-        print("ChangeLane");
-        float currentXPosition = transform.position.x;
-
-        // Gradually apply steering angle
-        float newSteeringAngle = Mathf.Lerp(currentSteerAngle, 0f, Time.deltaTime * steeringSpeed);
-        currentSteerAngle = newSteeringAngle;
-
-        // Apply the steering angle to the front wheels
-        frontLeftWheelCollider.steerAngle = currentSteerAngle;
-        frontRightWheelCollider.steerAngle = currentSteerAngle;
-
-        // Check if the car has reached the target lane position
-        if (Mathf.Abs(currentXPosition - targetLanePosition) < 0.1f)
+        if (isChangingLane)
         {
-            isChangingLane = false;
-            currentSteerAngle = 0f; // Reset steering angle when lane change is complete
+            // Apply the target steering angle to the front wheels to start lane change
+            currentSteerAngle = Mathf.Lerp(currentSteerAngle, targetSteeringAngle, Time.fixedDeltaTime * steeringSpeed);
+            frontLeftWheelCollider.steerAngle = currentSteerAngle;
+            frontRightWheelCollider.steerAngle = currentSteerAngle;
+
+            // Check if the car's front has reached the target lane position
+            if (Mathf.Abs(frontXPosition - targetLanePosition) < 0.1f)
+            {
+                // Lane change complete
+                isChangingLane = false;
+            }
+        }
+        else
+        {
+            // Gradually reduce the steering angle to zero after lane change
+            currentSteerAngle = Mathf.Lerp(currentSteerAngle, 0f, Time.fixedDeltaTime * steeringSpeed);
+            frontLeftWheelCollider.steerAngle = currentSteerAngle;
+            frontRightWheelCollider.steerAngle = currentSteerAngle;
+
+            // Correct the car's yaw (rotation around the y-axis)
+            float yaw = transform.eulerAngles.y;
+            yaw = (yaw > 180) ? yaw - 360 : yaw; // Normalize yaw to range -180 to 180
+
+            // Apply corrective steering based on the yaw angle
+            if (Mathf.Abs(yaw) > 0.1f)
+            {
+                float correctionSteer;
+                if (Mathf.Abs(yaw) > 10f)
+                {
+                    // Apply a stronger correction for large yaw deviations
+                    correctionSteer = Mathf.Clamp(-yaw * 1.0f, -maxSteerAngle, maxSteerAngle);
+                }
+                else if (Mathf.Abs(yaw) > 1f)
+                {
+                    // Apply a moderate correction for medium yaw deviations
+                    correctionSteer = Mathf.Clamp(-yaw * 0.7f, -maxSteerAngle, maxSteerAngle);
+                }
+                else
+                {
+                    // Apply a gentle correction for small yaw deviations
+                    correctionSteer = Mathf.Clamp(-yaw * 0.3f, -maxSteerAngle, maxSteerAngle);
+                }
+                frontLeftWheelCollider.steerAngle = correctionSteer;
+                frontRightWheelCollider.steerAngle = correctionSteer;
+            }
+
+            // Stop adjusting once the car is straight
+            if (Mathf.Abs(currentSteerAngle) < 0.01f && Mathf.Abs(yaw) < 0.1f)
+            {
+                currentSteerAngle = 0f; // Ensure it's fully straightened
+                frontLeftWheelCollider.steerAngle = 0f;
+                frontRightWheelCollider.steerAngle = 0f;
+            }
         }
 
     }
