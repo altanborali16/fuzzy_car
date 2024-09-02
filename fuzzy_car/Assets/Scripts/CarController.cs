@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using TMPro;
+using Unity.VisualScripting;
 
 public class CarController : MonoBehaviour
 {
@@ -37,8 +38,18 @@ public class CarController : MonoBehaviour
     [SerializeField] private float accelerationRate = 200f; // Rate at which the car speeds up
     [SerializeField] private float maxSpeed = 15f; // Maximum speed in km/h
 
-    public GameObject frontCar;
+    [SerializeField] private TextMeshProUGUI blueCarSppedText; // Text UI element to display speed
+
+    public GameObject blueCar;
+    private float blueCarPosition;
+    private float blueCarSpeed;
+    private bool isTiming = false; // Flag to check if the timer is running
+    private float timer = 0f; // Timer variable
+
     public Transform frontPosition;
+
+    //For auto break -- Test Only 
+    private bool isAutoBreaking = false;
 
     // For lane change
     private bool isChangingLane = false;
@@ -46,7 +57,7 @@ public class CarController : MonoBehaviour
     private float targetLanePosition = 2.43f; // The target X position for the lane change
     private float targetSteeringAngle = 0f; // The target X position for the lane change
     //private float laneChangeSteeringAngle = 30f; // Adjust the steering angle for lane change
-    private float laneWidth = 3.0f; // Adjust the lane width as needed
+    //private float laneWidth = 3.0f; // Adjust the lane width as needed
     //private float laneChangeSpeed = 5f; // The speed of lane change
     private float steeringSpeed = 5f; // Speed at which the steering angle changes
 
@@ -72,6 +83,10 @@ public class CarController : MonoBehaviour
         {
             rb.isKinematic = false;
         }
+        if (isTiming)
+        {
+            timer += Time.deltaTime;
+        }
 
         GetInput();
         HandleMotor();
@@ -79,8 +94,10 @@ public class CarController : MonoBehaviour
         UpdateWheels();
         CalculateAcceleration();
         DisplaySpeedAndAcceleration();
+        DisplaySpeedBlueCar();
         CalculateDistance();
         ChangeLane();
+        CheckBlueCar();
     }
 
     private void GetInput()
@@ -131,6 +148,14 @@ public class CarController : MonoBehaviour
             //print("Increase speed e girdi");
             IncreaseSpeed();
         }
+        else if (isAutoBreaking)
+        {
+            verticalInput = 0f;
+            frontLeftWheelCollider.motorTorque = verticalInput * motorForce;
+            frontRightWheelCollider.motorTorque = verticalInput * motorForce;
+            print($"Break Acceleration: {currentAcceleration:0.00} m/s²");
+            //print($"Position: {rb.position.z} ");
+        }
         else
         {
             frontLeftWheelCollider.motorTorque = verticalInput * motorForce;
@@ -138,7 +163,8 @@ public class CarController : MonoBehaviour
             //print("Vertical input : " + verticalInput + " -- Motor Torque : " + verticalInput * motorForce);
         }
 
-        currentbreakForce = isBreaking ? breakForce : 0f;
+        currentbreakForce = isBreaking || isAutoBreaking ? breakForce : 0f;
+        //print("Current break force : " + currentbreakForce);
         ApplyBreaking();
     }
 
@@ -193,9 +219,10 @@ public class CarController : MonoBehaviour
             else
             {
                 // Stop further acceleration if the target speed is reached
-                //isAccelerating = false;
+                isAccelerating = false;
+                isAutoBreaking = true;
                 //print("Oto Gaz kapalı");
-                StartLaneChange(-1);
+                //StartLaneChange(-1);
                 verticalInput = 0f;
                 frontLeftWheelCollider.motorTorque = verticalInput * motorForce;
                 frontRightWheelCollider.motorTorque = verticalInput * motorForce;
@@ -216,18 +243,7 @@ public class CarController : MonoBehaviour
         float speed = rb.velocity.magnitude * 3.6f; // Convert m/s to km/h
         speedometerText.text = $"Speed: {speed:0} km/h";
         accelerationText.text = $"Acceleration: {currentAcceleration:0.00} m/s²";
-    }
-    private void CalculateDistance()
-    {
-        if (frontCar != null)
-        {
-            double zDifference = System.Math.Abs((double)transform.position.z - (double)frontCar.transform.position.z); // car is 4.34
-            zDifference = zDifference - 4.34;
-            zDifference = System.Math.Round(zDifference, 2);
-            //Debug.Log("Distance to other object: " + distance + " meters");
-            distanceText.text = zDifference + " meters";
-        }
-    }
+    }    
     private void StartLaneChange(int direction)
     {
         if (!isLaneChangeDoneBefore)
@@ -301,4 +317,60 @@ public class CarController : MonoBehaviour
         }
 
     }
+
+    #region Blue Car Related
+    private void CheckBlueCar()
+    {
+        if(blueCar.transform.position.x >= 0f)
+        {
+            if (!isTiming)
+            {
+                isTiming = true;
+                float t = (System.Math.Abs((float)transform.position.z - (float)blueCar.transform.position.z) - 4.34f) / (rb.velocity.magnitude - (15.0f/ 3.6f));
+                print("Potential crash time : " + t);
+
+            }
+        }
+    }
+    private void CalculateDistance()
+    {
+        if (blueCar != null)
+        {
+            double zDifference = System.Math.Abs((double)transform.position.z - (double)blueCar.transform.position.z); // car is 4.34
+            zDifference = zDifference - 4.34;
+            zDifference = System.Math.Round(zDifference, 2);
+            //Debug.Log("Distance to other object: " + distance + " meters");
+            distanceText.text = zDifference + " meters";
+        }
+    }
+    private void DisplaySpeedBlueCar()
+    {
+        // Calculate the distance the other car has traveled since the last frame
+        float distanceTraveled = System.Math.Abs(blueCar.transform.position.z - blueCarPosition);
+
+        // Calculate the speed based on distance and time (speed = distance / time)
+        blueCarSpeed = distanceTraveled / Time.fixedDeltaTime;
+
+        // Update the previous position of the other car
+        blueCarPosition = blueCar.transform.position.z;
+
+        // Optionally, print or use the speed
+        //Debug.Log("Other Car Speed: " + blueCar + " units/second");
+        float speed = blueCarSpeed * 3.6f; // Convert m/s to km/h
+        blueCarSppedText.text = $"Blue Car Speed: {speed:0} km/h";
+    }
+    private void OnCollisionEnter(Collision collision)
+    {
+        // Check if the object we collided with has the correct tag
+        if (collision.gameObject == blueCar)
+        {
+            StopTimer(); // Stop the timer when collision occurs
+        }
+    }
+    public void StopTimer()
+    {
+        isTiming = false; // Stop the timer
+        Debug.Log("Timer stopped at: " + timer + " seconds.");
+    }
+    #endregion
 }

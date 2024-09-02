@@ -38,7 +38,15 @@ public class CarControllerForStopCar : MonoBehaviour
     //private float currentSpeed;
     //private float previousSpeed;
     //private float currentAcceleration;
+
+    // For lane change
+    private bool isChangingLane = false;
+    private bool isLaneChangeDoneBefore = false;
+    private float targetLanePosition = -2.43f; // The target X position for the lane change
+    private float targetSteeringAngle = 0f; // The target X position for the lane change
+    private float steeringSpeed = 4f; // Speed at which the steering angle changes
     private bool isAccelerating = false;
+    public Transform frontPosition;
 
     private void Awake()
     {
@@ -60,8 +68,9 @@ public class CarControllerForStopCar : MonoBehaviour
 
         GetInput();
         HandleMotor();
-        HandleSteering();
+        //HandleSteering();
         UpdateWheels();
+        ChangeLane();
         //CalculateAcceleration();
         //DisplaySpeedAndAcceleration();
     }
@@ -114,10 +123,10 @@ public class CarControllerForStopCar : MonoBehaviour
         }
         else
         {
-            //frontLeftWheelCollider.motorTorque = verticalInput * motorForce;
-            //frontRightWheelCollider.motorTorque = verticalInput * motorForce;
-            ////print("Vertical input : " + verticalInput + " -- Motor Torque : " + verticalInput * motorForce);
-            isBreaking = true;
+            frontLeftWheelCollider.motorTorque = verticalInput * motorForce;
+            frontRightWheelCollider.motorTorque = verticalInput * motorForce;
+            //print("Vertical input : " + verticalInput + " -- Motor Torque : " + verticalInput * motorForce);
+            //isBreaking = true;
         }
 
         currentbreakForce = isBreaking ? breakForce : 0f;
@@ -175,15 +184,88 @@ public class CarControllerForStopCar : MonoBehaviour
             else
             {
                 // Stop further acceleration if the target speed is reached
-                isAccelerating = false;
+                //isAccelerating = false;
                 //print("Oto Gaz kapalı Stop Car");
+                StartLaneChange(1);
                 verticalInput = 0f;
                 frontLeftWheelCollider.motorTorque = verticalInput * motorForce;
                 frontRightWheelCollider.motorTorque = verticalInput * motorForce;
             }
         }
     }
+    private void StartLaneChange(int direction)
+    {
+        if (!isLaneChangeDoneBefore)
+        {
+            isLaneChangeDoneBefore = true;
+            isChangingLane = true;
+            targetLanePosition = frontPosition.position.x + (direction * 2.43f); // Adjust target based on front position
+            targetSteeringAngle = maxSteerAngle * direction; // Set the target steering angle for lane change
+        }
 
+    }
+    private void ChangeLane()
+    {
+        float frontXPosition = frontPosition.position.x;
+
+        if (isChangingLane)
+        {
+            // Apply the target steering angle to the front wheels to start lane change
+            currentSteerAngle = Mathf.Lerp(currentSteerAngle, targetSteeringAngle, Time.fixedDeltaTime * steeringSpeed);
+            frontLeftWheelCollider.steerAngle = currentSteerAngle;
+            frontRightWheelCollider.steerAngle = currentSteerAngle;
+
+            // Check if the car's front has reached the target lane position
+            if (Mathf.Abs(frontXPosition - targetLanePosition) < 0.1f)
+            {
+                // Lane change complete
+                isChangingLane = false;
+            }
+        }
+        else
+        {
+            // Gradually reduce the steering angle to zero after lane change
+            currentSteerAngle = Mathf.Lerp(currentSteerAngle, 0f, Time.fixedDeltaTime * steeringSpeed);
+            frontLeftWheelCollider.steerAngle = currentSteerAngle;
+            frontRightWheelCollider.steerAngle = currentSteerAngle;
+
+            // Correct the car's yaw (rotation around the y-axis)
+            float yaw = transform.eulerAngles.y;
+            yaw = (yaw > 180) ? yaw - 360 : yaw; // Normalize yaw to range -180 to 180
+
+            // Apply corrective steering based on the yaw angle
+            if (Mathf.Abs(yaw) > 0.1f)
+            {
+                float correctionSteer;
+                if (Mathf.Abs(yaw) > 10f)
+                {
+                    // Apply a stronger correction for large yaw deviations
+                    correctionSteer = Mathf.Clamp(-yaw * 1.0f, -maxSteerAngle, maxSteerAngle);
+                }
+                else if (Mathf.Abs(yaw) > 1f)
+                {
+                    // Apply a moderate correction for medium yaw deviations
+                    correctionSteer = Mathf.Clamp(-yaw * 0.7f, -maxSteerAngle, maxSteerAngle);
+                }
+                else
+                {
+                    // Apply a gentle correction for small yaw deviations
+                    correctionSteer = Mathf.Clamp(-yaw * 0.3f, -maxSteerAngle, maxSteerAngle);
+                }
+                frontLeftWheelCollider.steerAngle = correctionSteer;
+                frontRightWheelCollider.steerAngle = correctionSteer;
+            }
+
+            // Stop adjusting once the car is straight
+            if (Mathf.Abs(currentSteerAngle) < 0.01f && Mathf.Abs(yaw) < 0.1f)
+            {
+                currentSteerAngle = 0f; // Ensure it's fully straightened
+                frontLeftWheelCollider.steerAngle = 0f;
+                frontRightWheelCollider.steerAngle = 0f;
+            }
+        }
+
+    }
     //private void CalculateAcceleration()
     //{
     //    // Acceleration is the change in speed (velocity) over time
