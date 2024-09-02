@@ -39,6 +39,10 @@ public class CarControllerForStopCar : MonoBehaviour
     //private float previousSpeed;
     //private float currentAcceleration;
 
+    public GameObject redCar;
+    private float redCarPosition;
+    private float redCarSpeed;
+
     // For lane change
     private bool isChangingLane = false;
     private bool isLaneChangeDoneBefore = false;
@@ -71,6 +75,7 @@ public class CarControllerForStopCar : MonoBehaviour
         //HandleSteering();
         UpdateWheels();
         ChangeLane();
+        CalculateSpeedRedCarCar();
         //CalculateAcceleration();
         //DisplaySpeedAndAcceleration();
     }
@@ -177,8 +182,8 @@ public class CarControllerForStopCar : MonoBehaviour
             {
                 //print("Oto Gaz açık Stop Car");
                 // Gradually increase the motor torque to accelerate
-                frontLeftWheelCollider.motorTorque += accelerationRate * Time.deltaTime;
-                frontRightWheelCollider.motorTorque += accelerationRate * Time.deltaTime;
+                frontLeftWheelCollider.motorTorque += accelerationRate * Time.fixedDeltaTime;
+                frontRightWheelCollider.motorTorque += accelerationRate * Time.fixedDeltaTime;
                 //print("Time.deltaTime : " + Time.deltaTime + " -- Motor Torque : " + accelerationRate * Time.deltaTime);
             }
             else
@@ -186,11 +191,12 @@ public class CarControllerForStopCar : MonoBehaviour
                 // Stop further acceleration if the target speed is reached
                 //isAccelerating = false;
                 //print("Oto Gaz kapalı Stop Car");
-                StartLaneChange(1);
                 verticalInput = 0f;
                 frontLeftWheelCollider.motorTorque = verticalInput * motorForce;
                 frontRightWheelCollider.motorTorque = verticalInput * motorForce;
             }
+            if (redCarSpeed >= 99.0f)
+                StartLaneChange(1);
         }
     }
     private void StartLaneChange(int direction)
@@ -266,6 +272,20 @@ public class CarControllerForStopCar : MonoBehaviour
         }
 
     }
+    #region Red Car
+    private void CalculateSpeedRedCarCar()
+    {
+        // Calculate the distance the other car has traveled since the last frame
+        float distanceTraveled = System.Math.Abs(redCar.transform.position.z - redCarPosition);
+
+        // Calculate the speed based on distance and time (speed = distance / time)
+        redCarSpeed = distanceTraveled / Time.fixedDeltaTime * 3.6f;
+
+        // Update the previous position of the other car
+        redCarPosition = redCar.transform.position.z;
+    }
+
+    #endregion
     //private void CalculateAcceleration()
     //{
     //    // Acceleration is the change in speed (velocity) over time

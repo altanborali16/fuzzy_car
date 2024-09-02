@@ -214,18 +214,20 @@ public class CarController : MonoBehaviour
                 // Gradually increase the motor torque to accelerate
                 frontLeftWheelCollider.motorTorque += accelerationRate * Time.fixedDeltaTime;
                 frontRightWheelCollider.motorTorque += accelerationRate * Time.fixedDeltaTime;
+                isBreaking = false;
                 //print("Time.deltaTime : " + Time.deltaTime + " -- Motor Torque : " + accelerationRate * Time.deltaTime);
             }
             else
             {
                 // Stop further acceleration if the target speed is reached
-                isAccelerating = false;
-                isAutoBreaking = true;
+                //isAccelerating = false;
+                //isAutoBreaking = true;
                 //print("Oto Gaz kapalı");
                 //StartLaneChange(-1);
                 verticalInput = 0f;
                 frontLeftWheelCollider.motorTorque = verticalInput * motorForce;
                 frontRightWheelCollider.motorTorque = verticalInput * motorForce;
+                isBreaking = true;
             }
         }
     }
@@ -326,7 +328,7 @@ public class CarController : MonoBehaviour
             if (!isTiming)
             {
                 isTiming = true;
-                float t = (System.Math.Abs((float)transform.position.z - (float)blueCar.transform.position.z) - 4.34f) / (rb.velocity.magnitude - (15.0f/ 3.6f));
+                float t = (System.Math.Abs((float)transform.position.z - (float)blueCar.transform.position.z) - 4.34f) / (rb.velocity.magnitude - (30.0f/ 3.6f));
                 print("Potential crash time : " + t);
 
             }
