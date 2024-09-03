@@ -178,12 +178,20 @@ public class CarControllerForStopCar : MonoBehaviour
             float targetSpeedInMetersPerSecond = maxSpeed / 3.6f;
 
             // If the car's current speed is less than the target speed
-            if (rb.velocity.magnitude < targetSpeedInMetersPerSecond)
+            if (rb.velocity.z < targetSpeedInMetersPerSecond && !isChangingLane)
             {
                 //print("Oto Gaz açık Stop Car");
                 // Gradually increase the motor torque to accelerate
                 frontLeftWheelCollider.motorTorque += accelerationRate * Time.fixedDeltaTime;
                 frontRightWheelCollider.motorTorque += accelerationRate * Time.fixedDeltaTime;
+                //print("Time.deltaTime : " + Time.deltaTime + " -- Motor Torque : " + accelerationRate * Time.deltaTime);
+            }
+            else if (rb.velocity.z < targetSpeedInMetersPerSecond && isChangingLane)
+            {
+                //print("Oto Gaz açık Stop Car");
+                // Gradually increase the motor torque to accelerate
+                frontLeftWheelCollider.motorTorque += accelerationRate * Time.fixedDeltaTime * 2;
+                frontRightWheelCollider.motorTorque += accelerationRate * Time.fixedDeltaTime * 2;
                 //print("Time.deltaTime : " + Time.deltaTime + " -- Motor Torque : " + accelerationRate * Time.deltaTime);
             }
             else
@@ -195,7 +203,7 @@ public class CarControllerForStopCar : MonoBehaviour
                 frontLeftWheelCollider.motorTorque = verticalInput * motorForce;
                 frontRightWheelCollider.motorTorque = verticalInput * motorForce;
             }
-            if (redCarSpeed >= 99.0f)
+            if (redCarPosition >= 370.0f)
                 StartLaneChange(1);
         }
     }

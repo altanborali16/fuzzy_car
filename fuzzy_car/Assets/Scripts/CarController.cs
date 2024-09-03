@@ -36,7 +36,7 @@ public class CarController : MonoBehaviour
     [SerializeField] private TextMeshProUGUI accelerationText; // Text UI element to display speed
     [SerializeField] private TextMeshProUGUI distanceText; // Text UI element to display distance with fron car
     [SerializeField] private float accelerationRate = 200f; // Rate at which the car speeds up
-    [SerializeField] private float maxSpeed = 15f; // Maximum speed in km/h
+    [SerializeField] private float maxSpeed = 100f; // Maximum speed in km/h
 
     [SerializeField] private TextMeshProUGUI blueCarSppedText; // Text UI element to display speed
 
@@ -66,6 +66,12 @@ public class CarController : MonoBehaviour
     private float currentAcceleration;
     private bool isAccelerating = false;
 
+
+    //Average acc
+    private float totalAcc;
+    private float accCounter;
+    private float totalBlueCarSpeed;
+
     private void Awake()
     {
         rb = GetComponent<Rigidbody>();
@@ -85,7 +91,7 @@ public class CarController : MonoBehaviour
         }
         if (isTiming)
         {
-            timer += Time.deltaTime;
+            timer += Time.fixedDeltaTime; // For collision 
         }
 
         GetInput();
@@ -96,7 +102,7 @@ public class CarController : MonoBehaviour
         DisplaySpeedAndAcceleration();
         DisplaySpeedBlueCar();
         CalculateDistance();
-        ChangeLane();
+        //ChangeLane(); //Need Later
         CheckBlueCar();
     }
 
@@ -153,7 +159,10 @@ public class CarController : MonoBehaviour
             verticalInput = 0f;
             frontLeftWheelCollider.motorTorque = verticalInput * motorForce;
             frontRightWheelCollider.motorTorque = verticalInput * motorForce;
-            print($"Break Acceleration: {currentAcceleration:0.00} m/s²");
+            totalAcc += currentAcceleration;
+            accCounter += 1.0f;
+            totalBlueCarSpeed += blueCarSpeed;
+            //print($"Break Acceleration: {currentAcceleration:0.00} m/s²");
             //print($"Position: {rb.position.z} ");
         }
         else
@@ -162,8 +171,15 @@ public class CarController : MonoBehaviour
             frontRightWheelCollider.motorTorque = verticalInput * motorForce;
             //print("Vertical input : " + verticalInput + " -- Motor Torque : " + verticalInput * motorForce);
         }
+        if (isBreaking)
+            currentbreakForce = breakForce / 16;
+        else if (isAutoBreaking)
+            currentbreakForce = breakForce;
+        else
+            currentbreakForce = 0f;
 
-        currentbreakForce = isBreaking || isAutoBreaking ? breakForce : 0f;
+
+        //currentbreakForce = isBreaking || isAutoBreaking ? breakForce : 0f;
         //print("Current break force : " + currentbreakForce);
         ApplyBreaking();
     }
@@ -206,9 +222,17 @@ public class CarController : MonoBehaviour
         {
             // Calculate the target speed in m/s
             float targetSpeedInMetersPerSecond = maxSpeed / 3.6f;
+            float targetMinusTenSpeedInMetersPerSecond = (maxSpeed - 20) / 3.6f;
+
+            if (rb.velocity.z < targetSpeedInMetersPerSecond && rb.velocity.z > targetMinusTenSpeedInMetersPerSecond)
+            {
+                frontLeftWheelCollider.motorTorque += accelerationRate * Time.fixedDeltaTime / 64;
+                frontRightWheelCollider.motorTorque += accelerationRate * Time.fixedDeltaTime / 64;
+                isBreaking = false;
+            }
 
             // If the car's current speed is less than the target speed
-            if (rb.velocity.magnitude < targetSpeedInMetersPerSecond)
+            else if (rb.velocity.z < targetSpeedInMetersPerSecond)
             {
                 //print("Oto Gaz açık");
                 // Gradually increase the motor torque to accelerate
@@ -217,6 +241,7 @@ public class CarController : MonoBehaviour
                 isBreaking = false;
                 //print("Time.deltaTime : " + Time.deltaTime + " -- Motor Torque : " + accelerationRate * Time.deltaTime);
             }
+
             else
             {
                 // Stop further acceleration if the target speed is reached
@@ -224,28 +249,47 @@ public class CarController : MonoBehaviour
                 //isAutoBreaking = true;
                 //print("Oto Gaz kapalı");
                 //StartLaneChange(-1);
-                verticalInput = 0f;
-                frontLeftWheelCollider.motorTorque = verticalInput * motorForce;
-                frontRightWheelCollider.motorTorque = verticalInput * motorForce;
                 isBreaking = true;
+                verticalInput = 0f;
+                frontLeftWheelCollider.motorTorque = 0.0f; //verticalInput * motorForce;
+                frontRightWheelCollider.motorTorque = 0.0f;
+
             }
+            if (blueCar.transform.position.x >= 0.0f)//(rb.position.z >= 370.0f)
+            {
+                verticalInput = 0.00f;
+                frontLeftWheelCollider.motorTorque = 0.0f; //verticalInput * motorForce;
+                frontRightWheelCollider.motorTorque = 0.0f; //verticalInput * motorForce;
+                isAccelerating = false;
+                isAutoBreaking = true;
+                isBreaking = false;
+            }
+        }
+        if (blueCar.transform.position.x >= 0.0f)//(rb.position.z >= 370.0f)
+        {
+            verticalInput = 0.00f;
+            frontLeftWheelCollider.motorTorque = 0.0f; //verticalInput * motorForce;
+            frontRightWheelCollider.motorTorque = 0.0f; //verticalInput * motorForce;
+            isAccelerating = false;
+            isAutoBreaking = true;
+            isBreaking = false;
         }
     }
 
     private void CalculateAcceleration()
     {
         // Acceleration is the change in speed (velocity) over time
-        float currentVelocity = rb.velocity.magnitude; // in meters per second (m/s)
+        float currentVelocity = rb.velocity.z; // in meters per second (m/s)
         currentAcceleration = (currentVelocity - previousSpeed) / Time.fixedDeltaTime; // m/s²
         previousSpeed = currentVelocity;
     }
 
     private void DisplaySpeedAndAcceleration()
     {
-        float speed = rb.velocity.magnitude * 3.6f; // Convert m/s to km/h
-        speedometerText.text = $"Speed: {speed:0} km/h";
+        float speed = rb.velocity.z * 3.6f; // Convert m/s to km/h
+        speedometerText.text = $"Speed: {speed:0.00} km/h";
         accelerationText.text = $"Acceleration: {currentAcceleration:0.00} m/s²";
-    }    
+    }
     private void StartLaneChange(int direction)
     {
         if (!isLaneChangeDoneBefore)
@@ -323,16 +367,84 @@ public class CarController : MonoBehaviour
     #region Blue Car Related
     private void CheckBlueCar()
     {
-        if(blueCar.transform.position.x >= 0f)
+        if (blueCar.transform.position.x >= 0.0f)
         {
             if (!isTiming)
             {
                 isTiming = true;
-                float t = (System.Math.Abs((float)transform.position.z - (float)blueCar.transform.position.z) - 4.34f) / (rb.velocity.magnitude - (30.0f/ 3.6f));
-                print("Potential crash time : " + t);
+                //float t = (System.Math.Abs((float)transform.position.z - (float)blueCar.transform.position.z) - 4.34f) / (rb.velocity.magnitude - (30.0f / 3.6f));
+                //print("Potential crash time : " + t);
+
+                //float a_red = -2.0f; // Deceleration of the red car in m/s²
+                //float v_red_initial = rb.velocity.magnitude; // Initial velocity of the red car in m/s
+                //float v_blue_initial = 30.0f / 3.6f; // Initial velocity of the blue car in m/s (30 km/h)
+                //float d_initial = Mathf.Abs(transform.position.z - blueCar.transform.position.z) - 4.34f; // Initial distance minus safety buffer
+                //print("Distance : " + d_initial);
+
+                float a_red = -5.048f; // Deceleration of the red car in m/s²
+                float v_red_initial = rb.velocity.z; // Initial velocity of the red car in m/s
+                //print("Red speed : " + v_red_initial + " m/s --- " + v_red_initial * 3.6f + " km/h"); // Red speed : 27.79093 m/s --- 100.0473 km/h
+                float v_blue_initial = 8.317f; //30.0f / 3.6f; //30.0f / 3.6f; //blueCarSpeed + 0.08f; //30.0f / 3.6f; //blueCarSpeed; //30.0f / 3.6f; // Initial velocity of the blue car in m/s (30 km/h)
+                //print("Blue car speed : " + blueCarSpeed * 3.6f);
+                //print("Angle : " + blueCar.transform.rotation.y);
+                float d_initial = Mathf.Abs(blueCar.transform.position.z - transform.position.z) - (2.17f +1.98f); // Initial distance minus safety buffer
+                //print("Red car pos : " + transform.position.z);
+                //print("Blue car pos : " + blueCar.transform.position.z);
+                //print("Distance : " + d_initial);
+
+                //float collisionTime = FindCollisionTime(a_red,v_red_initial,v_blue_initial,d_initial);
+                //print("Collision time : " + collisionTime);
+
+                // Coefficients for the quadratic equation
+                float A = 0.5f * a_red;
+                float B = v_red_initial - v_blue_initial;
+                float C = -d_initial;
+
+                // Discriminant
+                float discriminant = B * B - (  4 * A * C );
+
+                if (discriminant >= 0)
+                {
+                    // Two possible solutions
+                    float t1 = (-B + Mathf.Sqrt(discriminant)) / (2 * A);
+                    float t2 = (-B - Mathf.Sqrt(discriminant)) / (2 * A);
+
+                    // Choose the smallest positive time
+                    float t = Mathf.Min(t1, t2);
+
+                    // Calculate crash velocity
+                    float crashVelocity = v_red_initial + a_red * t;
+                    //float crashSpeed = Mathf.Abs(crashVelocity); // Ensure it's positive
+
+                    print("Calcucalted Time until collision: " + t + " seconds");
+                    print("Calculated Crash speed of red car: " + crashVelocity + " m/s ---- " + crashVelocity * 3.6f + " km/h");
+                }
+                else
+                {
+                    print("No collision will occur.");
+                }
 
             }
         }
+
+    }
+    float FindCollisionTime(float aRed, float vRed, float vBlue, float distance, float maxT = 10f, float tolerance = 0.1f, float step = 0.01f)
+    {
+        for (float t = 0; t <= maxT; t += step)
+        {
+            // Evaluate the equation: (1/2) * aRed * t^2 + (vRed - vBlue) * t - distance
+            float equationResult = 0.5f * aRed * t * t + (vRed - vBlue) * t - distance;
+
+            // Check if the result is close to zero within the tolerance
+            if (Mathf.Abs(equationResult) <= tolerance)
+            {
+                // If close enough, return this value of t
+                return t;
+            }
+        }
+
+        // If no solution is found within maxT, return a negative value or an indicator that no solution was found
+        return -1f; // or return maxT + step;
     }
     private void CalculateDistance()
     {
@@ -359,12 +471,12 @@ public class CarController : MonoBehaviour
         // Optionally, print or use the speed
         //Debug.Log("Other Car Speed: " + blueCar + " units/second");
         float speed = blueCarSpeed * 3.6f; // Convert m/s to km/h
-        blueCarSppedText.text = $"Blue Car Speed: {speed:0} km/h";
+        blueCarSppedText.text = $"Blue Car Speed: {speed:0.00} km/h";
     }
     private void OnCollisionEnter(Collision collision)
     {
         // Check if the object we collided with has the correct tag
-        if (collision.gameObject == blueCar)
+        if (collision.gameObject.CompareTag("BlueCar"))
         {
             StopTimer(); // Stop the timer when collision occurs
         }
@@ -372,7 +484,13 @@ public class CarController : MonoBehaviour
     public void StopTimer()
     {
         isTiming = false; // Stop the timer
-        Debug.Log("Timer stopped at: " + timer + " seconds.");
+        print("Timer stopped at: " + timer + " seconds.");
+        print("Crash velocity of red car: " + rb.velocity.z + " m/s---- " + rb.velocity.z * 3.6f + " km/h");
+        //print("Crash velocity of red car: " + rb.velocity.magnitude + " m/s---- " + rb.velocity.magnitude * 3.6f + " km/h");
+        print("Average Acc : " + totalAcc / accCounter); // -5.07
+        print("Average Blue Car Speed : " + totalBlueCarSpeed / accCounter); // 7.92
+        print("Time ellapsed : " +  0.02f * accCounter); // 7.92
+        //print("Fixed Delta Time : " + Time.fixedDeltaTime); // 0.02
     }
     #endregion
 }
