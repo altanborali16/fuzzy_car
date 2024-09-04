@@ -162,6 +162,11 @@ public class CarController : MonoBehaviour
             totalAcc += currentAcceleration;
             accCounter += 1.0f;
             totalBlueCarSpeed += blueCarSpeed;
+            currentbreakForce = CalculateBrakeForceForDeceleration(-6.5f); // Desired constant deceleration
+            //print("Front : " + frontLeftWheelCollider.motorTorque); //0
+            //print("Rear : " + rearLeftWheelCollider.motorTorque); // 0
+            //print("Break Force: " + currentbreakForce);
+            ApplyBreaking();
             //print($"Break Acceleration: {currentAcceleration:0.00} m/s²");
             //print($"Position: {rb.position.z} ");
         }
@@ -171,12 +176,19 @@ public class CarController : MonoBehaviour
             frontRightWheelCollider.motorTorque = verticalInput * motorForce;
             //print("Vertical input : " + verticalInput + " -- Motor Torque : " + verticalInput * motorForce);
         }
+        // Handle regular braking
         if (isBreaking)
-            currentbreakForce = breakForce / 16;
+        {
+            currentbreakForce = breakForce / 8;
+        }
         else if (isAutoBreaking)
-            currentbreakForce = breakForce;
+        {
+            currentbreakForce = CalculateBrakeForceForDeceleration(-6.5f);
+        }
         else
-            currentbreakForce = 0f;
+        {
+            currentbreakForce = 0;
+        }
 
 
         //currentbreakForce = isBreaking || isAutoBreaking ? breakForce : 0f;
@@ -190,6 +202,15 @@ public class CarController : MonoBehaviour
         frontLeftWheelCollider.brakeTorque = currentbreakForce;
         rearLeftWheelCollider.brakeTorque = currentbreakForce;
         rearRightWheelCollider.brakeTorque = currentbreakForce;
+    }
+    private float CalculateBrakeForceForDeceleration(float desiredDeceleration)
+    {
+        float vehicleMass = rb.mass; // Get the mass of the vehicle
+        float wheelRadius = frontLeftWheelCollider.radius; // Assuming all wheels have the same radius
+        float decelerationForce = vehicleMass * Mathf.Abs(desiredDeceleration);
+        float brakeTorque = decelerationForce * wheelRadius; // Convert force to torque
+
+        return brakeTorque;
     }
 
     private void HandleSteering()
@@ -226,8 +247,8 @@ public class CarController : MonoBehaviour
 
             if (rb.velocity.z < targetSpeedInMetersPerSecond && rb.velocity.z > targetMinusTenSpeedInMetersPerSecond)
             {
-                frontLeftWheelCollider.motorTorque += accelerationRate * Time.fixedDeltaTime / 64;
-                frontRightWheelCollider.motorTorque += accelerationRate * Time.fixedDeltaTime / 64;
+                frontLeftWheelCollider.motorTorque += accelerationRate * Time.fixedDeltaTime / 2;
+                frontRightWheelCollider.motorTorque += accelerationRate * Time.fixedDeltaTime / 2;
                 isBreaking = false;
             }
 
@@ -381,13 +402,13 @@ public class CarController : MonoBehaviour
                 //float d_initial = Mathf.Abs(transform.position.z - blueCar.transform.position.z) - 4.34f; // Initial distance minus safety buffer
                 //print("Distance : " + d_initial);
 
-                float a_red = -5.048f; // Deceleration of the red car in m/s²
+                float a_red = -5.75f; // Deceleration of the red car in m/s²
                 float v_red_initial = rb.velocity.z; // Initial velocity of the red car in m/s
                 //print("Red speed : " + v_red_initial + " m/s --- " + v_red_initial * 3.6f + " km/h"); // Red speed : 27.79093 m/s --- 100.0473 km/h
-                float v_blue_initial = 8.317f; //30.0f / 3.6f; //30.0f / 3.6f; //blueCarSpeed + 0.08f; //30.0f / 3.6f; //blueCarSpeed; //30.0f / 3.6f; // Initial velocity of the blue car in m/s (30 km/h)
+                float v_blue_initial = blueCarSpeed; //8.56f; //30.0f / 3.6f; //30.0f / 3.6f; //blueCarSpeed + 0.08f; //30.0f / 3.6f; //blueCarSpeed; //30.0f / 3.6f; // Initial velocity of the blue car in m/s (30 km/h)
                 //print("Blue car speed : " + blueCarSpeed * 3.6f);
                 //print("Angle : " + blueCar.transform.rotation.y);
-                float d_initial = Mathf.Abs(blueCar.transform.position.z - transform.position.z) - (2.17f +1.98f); // Initial distance minus safety buffer
+                float d_initial = Mathf.Abs(blueCar.transform.position.z - transform.position.z) - 4.8f; //- (2.17f +1.98f); // Initial distance car center position difference
                 //print("Red car pos : " + transform.position.z);
                 //print("Blue car pos : " + blueCar.transform.position.z);
                 //print("Distance : " + d_initial);
@@ -401,7 +422,7 @@ public class CarController : MonoBehaviour
                 float C = -d_initial;
 
                 // Discriminant
-                float discriminant = B * B - (  4 * A * C );
+                float discriminant = B * B - (4 * A * C);
 
                 if (discriminant >= 0)
                 {
@@ -485,11 +506,13 @@ public class CarController : MonoBehaviour
     {
         isTiming = false; // Stop the timer
         print("Timer stopped at: " + timer + " seconds.");
-        print("Crash velocity of red car: " + rb.velocity.z + " m/s---- " + rb.velocity.z * 3.6f + " km/h");
+        print("Crash velocity of red car: " + previousSpeed + " m/s---- " + previousSpeed * 3.6f + " km/h");
         //print("Crash velocity of red car: " + rb.velocity.magnitude + " m/s---- " + rb.velocity.magnitude * 3.6f + " km/h");
         print("Average Acc : " + totalAcc / accCounter); // -5.07
         print("Average Blue Car Speed : " + totalBlueCarSpeed / accCounter); // 7.92
-        print("Time ellapsed : " +  0.02f * accCounter); // 7.92
+        print("Time ellapsed : " + Time.fixedDeltaTime * accCounter); 
+        float distance = Mathf.Abs(blueCar.transform.position.z - transform.position.z) - 4.34f;
+        print("Distance : " + distance); // 0.399
         //print("Fixed Delta Time : " + Time.fixedDeltaTime); // 0.02
     }
     #endregion
