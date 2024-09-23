@@ -4,6 +4,8 @@ using System.Collections.Generic;
 using UnityEngine;
 using TMPro;
 using Unity.VisualScripting;
+using Newtonsoft.Json;
+using UnityEngine.Windows;
 
 public class CarController : MonoBehaviour
 {
@@ -108,16 +110,16 @@ public class CarController : MonoBehaviour
 
     private void GetInput()
     {
-        horizontalInput = Input.GetAxis(HORIZONTAL);
-        verticalInput = Input.GetAxis(VERTICAL);
-        isBreaking = Input.GetKey(KeyCode.Space);
+        horizontalInput = UnityEngine.Input.GetAxis(HORIZONTAL);
+        verticalInput = UnityEngine.Input.GetAxis(VERTICAL);
+        isBreaking = UnityEngine.Input.GetKey(KeyCode.Space);
         // Automatically increase speed when a button is pressed (e.g., Left Shift)
-        if (Input.GetKeyDown(KeyCode.F))
+        if (UnityEngine.Input.GetKeyDown(KeyCode.F))
         {
             //print("Oto Hız Sistemi açıldı");
             isAccelerating = true;
         }
-        if (Input.GetKeyDown(KeyCode.G))
+        if (UnityEngine.Input.GetKeyDown(KeyCode.G))
         {
             //print("Oto Hız Sistemi kapatıldı");
             isAccelerating = false;
@@ -385,6 +387,139 @@ public class CarController : MonoBehaviour
 
     }
 
+    #region Fuzzy
+    private void StartFuzzyCalculations(float calculatedCrashVelocityOnBlueCar)
+    {
+        string json = System.IO.File.ReadAllText("Assets//Scripts//FuzzyInference_Fuzzy1_SpeedBased.json");
+        FuzzyData data = JsonConvert.DeserializeObject<FuzzyData>(json);
+        if (data == null)
+        {
+            Debug.LogError("Failed to deserialize JSON data.");
+            return;
+        }
+        // Example: Accessing output values
+        List<float> outputValues = data.Output.Values;
+        List<string> outputLabels = data.Output.Labels;
+        List<List<float>> ruleTable = data.Output.RuleTable;
+
+        //// Process output values
+        //Debug.Log("Output Values: " + string.Join(", ", outputValues));
+        //Debug.Log("Output Labels: " + string.Join(", ", outputLabels));
+
+        //// Example: Accessing inputs and memberships
+        //foreach (var inputEntry in data.Inputs)
+        //{
+        //    string inputName = inputEntry.Key;
+        //    InputFuzzy input = inputEntry.Value;
+        //    Debug.Log("Input: " + inputName);
+
+        //    foreach (var membershipEntry in input.Memberships)
+        //    {
+        //        string membershipName = membershipEntry.Key;
+        //        Membership membership = membershipEntry.Value;
+
+        //        Debug.Log($"Membership: {membershipName} - Label: {membership.Label}");
+        //        Debug.Log("X Points: " + string.Join(", ", membership.xPoints));
+        //        Debug.Log("Y Points: " + string.Join(", ", membership.yPoints));
+        //    }
+        //}
+
+        Debug.Log("Fuzzy inference data imported successfully.");
+
+        Dictionary<int, List<float>> outs = new Dictionary<int, List<float>>() {{1, new List<float>()}, {2, new List<float>()}};
+        Dictionary<int, float> inputTestValues = new Dictionary<int, float>() { { 1, 0 }, { 2, 0 } };
+        inputTestValues[1] = Math.Abs(blueCarSpeed * 3.6f - calculatedCrashVelocityOnBlueCar * 3.6f); // km/hr or m/s
+        inputTestValues[0] = (blueCarSpeed * 3.6f + calculatedCrashVelocityOnBlueCar * 3.6f) / 2; // km/hr or m/s
+        for (int k = 0; k < 2; k++)
+        {
+            var inputID = k + 1;
+            foreach (var inputEntry in data.Inputs)
+            {
+                string inputName = inputEntry.Key;
+                InputFuzzy input = inputEntry.Value;
+
+                foreach (var membershipEntry in input.Memberships)
+                {
+                    string membershipName = membershipEntry.Key;
+                    Membership membership = membershipEntry.Value;
+
+                    //Debug.Log($"Membership: {membershipName} - Label: {membership.Label}");
+                    //Debug.Log("X Points: " + string.Join(", ", membership.xPoints));
+                    //Debug.Log("Y Points: " + string.Join(", ", membership.yPoints));
+                    outs[inputID].Add(CalculateFiring(membership.xPoints.ToArray(), membership.yPoints.ToArray(), inputTestValues[inputID]));
+                }
+            }
+        }
+        float[,] array = ConvertTo2DArray(ruleTable);
+        float outputTest = CalculateFuzzy(array, outs);
+        Debug.Log("Fuzzy output : " + outputTest);
+
+    }
+    private float CalculateFiring(float[] points_x, float[] points_y, float input)
+    {
+        float output = 0f;
+        if (input <= points_x[0])
+            output = points_y[0];
+        else if (input >= points_x[2])
+            output = points_y[2];
+        else if (input > points_x[0] && input <= points_x[1])
+        {
+            if (points_y[0] == points_y[1])
+                output = points_y[1];
+            else
+                output = (input - points_x[0]) / Mathf.Abs(points_x[1] - points_x[0]);
+        }
+        else if (input > points_x[1] && input < points_x[2])
+        {
+            if (points_y[1] == points_y[2])
+                output = points_y[2];
+            else
+                output = (points_x[2] - input) / Mathf.Abs(points_x[2] - points_x[1]);
+        }
+
+        return output;
+    }
+    private float CalculateFuzzy(float[,] ruleValues, Dictionary<int, List<float>> firings)
+    {
+        float outputSum = 0f;
+        float weightSum = 0f;
+        for (int i = 0; i < ruleValues.GetLength(1); i++)
+        {
+            for (int j = 0; j < ruleValues.GetLength(0); j++)
+            {
+                var w = Mathf.Min(firings[1][j], firings[2][i]);
+                outputSum += w * ruleValues[i, j];
+                weightSum += w;
+            }
+        }
+
+        if (weightSum == 0)
+            return 0f;
+        else
+            return outputSum / weightSum;
+    }
+    public float[,] ConvertTo2DArray(List<List<float>> list)
+    {
+        // Determine the dimensions
+        int rows = list.Count;
+        int cols = list[0].Count;
+
+        // Create the 2D array with the same dimensions
+        float[,] array = new float[rows, cols];
+
+        // Fill the array with values from the List<List<float>>
+        for (int i = 0; i < rows; i++)
+        {
+            for (int j = 0; j < cols; j++)
+            {
+                array[i, j] = list[i][j];
+            }
+        }
+
+        return array;
+    }
+    #endregion
+
     #region Blue Car Related
     private void CheckBlueCar()
     {
@@ -392,63 +527,73 @@ public class CarController : MonoBehaviour
         {
             if (!isTiming)
             {
-                isTiming = true;
-                //float t = (System.Math.Abs((float)transform.position.z - (float)blueCar.transform.position.z) - 4.34f) / (rb.velocity.magnitude - (30.0f / 3.6f));
-                //print("Potential crash time : " + t);
-
-                //float a_red = -2.0f; // Deceleration of the red car in m/s²
-                //float v_red_initial = rb.velocity.magnitude; // Initial velocity of the red car in m/s
-                //float v_blue_initial = 30.0f / 3.6f; // Initial velocity of the blue car in m/s (30 km/h)
-                //float d_initial = Mathf.Abs(transform.position.z - blueCar.transform.position.z) - 4.34f; // Initial distance minus safety buffer
-                //print("Distance : " + d_initial);
-
-                float a_red = -5.75f; // Deceleration of the red car in m/s²
-                float v_red_initial = rb.velocity.z; // Initial velocity of the red car in m/s
-                //print("Red speed : " + v_red_initial + " m/s --- " + v_red_initial * 3.6f + " km/h"); // Red speed : 27.79093 m/s --- 100.0473 km/h
-                float v_blue_initial = blueCarSpeed; //8.56f; //30.0f / 3.6f; //30.0f / 3.6f; //blueCarSpeed + 0.08f; //30.0f / 3.6f; //blueCarSpeed; //30.0f / 3.6f; // Initial velocity of the blue car in m/s (30 km/h)
-                //print("Blue car speed : " + blueCarSpeed * 3.6f);
-                //print("Angle : " + blueCar.transform.rotation.y);
-                float d_initial = Mathf.Abs(blueCar.transform.position.z - transform.position.z) - 4.8f; //- (2.17f +1.98f); // Initial distance car center position difference
-                //print("Red car pos : " + transform.position.z);
-                //print("Blue car pos : " + blueCar.transform.position.z);
-                //print("Distance : " + d_initial);
-
-                //float collisionTime = FindCollisionTime(a_red,v_red_initial,v_blue_initial,d_initial);
-                //print("Collision time : " + collisionTime);
-
-                // Coefficients for the quadratic equation
-                float A = 0.5f * a_red;
-                float B = v_red_initial - v_blue_initial;
-                float C = -d_initial;
-
-                // Discriminant
-                float discriminant = B * B - (4 * A * C);
-
-                if (discriminant >= 0)
-                {
-                    // Two possible solutions
-                    float t1 = (-B + Mathf.Sqrt(discriminant)) / (2 * A);
-                    float t2 = (-B - Mathf.Sqrt(discriminant)) / (2 * A);
-
-                    // Choose the smallest positive time
-                    float t = Mathf.Min(t1, t2);
-
-                    // Calculate crash velocity
-                    float crashVelocity = v_red_initial + a_red * t;
-                    //float crashSpeed = Mathf.Abs(crashVelocity); // Ensure it's positive
-
-                    print("Calcucalted Time until collision: " + t + " seconds");
-                    print("Calculated Crash speed of red car: " + crashVelocity + " m/s ---- " + crashVelocity * 3.6f + " km/h");
-                }
-                else
-                {
-                    print("No collision will occur.");
-                }
+                float calculatedCrashVelocityOnBlueCar =  CalculateCollisionSpeedOnBlueCar();
+                if (calculatedCrashVelocityOnBlueCar > 0.00f)
+                    StartFuzzyCalculations(calculatedCrashVelocityOnBlueCar);
 
             }
         }
 
     }
+
+    private float CalculateCollisionSpeedOnBlueCar()
+    {
+        isTiming = true;
+        //float t = (System.Math.Abs((float)transform.position.z - (float)blueCar.transform.position.z) - 4.34f) / (rb.velocity.magnitude - (30.0f / 3.6f));
+        //print("Potential crash time : " + t);
+
+        //float a_red = -2.0f; // Deceleration of the red car in m/s²
+        //float v_red_initial = rb.velocity.magnitude; // Initial velocity of the red car in m/s
+        //float v_blue_initial = 30.0f / 3.6f; // Initial velocity of the blue car in m/s (30 km/h)
+        //float d_initial = Mathf.Abs(transform.position.z - blueCar.transform.position.z) - 4.34f; // Initial distance minus safety buffer
+        //print("Distance : " + d_initial);
+
+        float a_red = -5.75f; // Deceleration of the red car in m/s²
+        float v_red_initial = rb.velocity.z; // Initial velocity of the red car in m/s
+                                             //print("Red speed : " + v_red_initial + " m/s --- " + v_red_initial * 3.6f + " km/h"); // Red speed : 27.79093 m/s --- 100.0473 km/h
+        float v_blue_initial = blueCarSpeed; //8.56f; //30.0f / 3.6f; //30.0f / 3.6f; //blueCarSpeed + 0.08f; //30.0f / 3.6f; //blueCarSpeed; //30.0f / 3.6f; // Initial velocity of the blue car in m/s (30 km/h)
+                                             //print("Blue car speed : " + blueCarSpeed * 3.6f);
+                                             //print("Angle : " + blueCar.transform.rotation.y);
+        float d_initial = Mathf.Abs(blueCar.transform.position.z - transform.position.z) - 4.8f; //- (2.17f +1.98f); // Initial distance car center position difference
+                                                                                                 //print("Red car pos : " + transform.position.z);
+                                                                                                 //print("Blue car pos : " + blueCar.transform.position.z);
+                                                                                                 //print("Distance : " + d_initial);
+
+        //float collisionTime = FindCollisionTime(a_red,v_red_initial,v_blue_initial,d_initial);
+        //print("Collision time : " + collisionTime);
+
+        // Coefficients for the quadratic equation
+        float A = 0.5f * a_red;
+        float B = v_red_initial - v_blue_initial;
+        float C = -d_initial;
+
+        // Discriminant
+        float discriminant = B * B - (4 * A * C);
+
+        if (discriminant >= 0)
+        {
+            // Two possible solutions
+            float t1 = (-B + Mathf.Sqrt(discriminant)) / (2 * A);
+            float t2 = (-B - Mathf.Sqrt(discriminant)) / (2 * A);
+
+            // Choose the smallest positive time
+            float t = Mathf.Min(t1, t2);
+
+            // Calculate crash velocity
+            float crashVelocity = v_red_initial + a_red * t;
+            //float crashSpeed = Mathf.Abs(crashVelocity); // Ensure it's positive
+
+            print("Calcucalted Time until collision: " + t + " seconds");
+            print("Calculated Crash speed of red car: " + crashVelocity + " m/s ---- " + crashVelocity * 3.6f + " km/h");
+            return crashVelocity;
+        }
+        else
+        {
+            print("No collision will occur.");
+            return -1.0f; ;
+        }
+    }
+
     float FindCollisionTime(float aRed, float vRed, float vBlue, float distance, float maxT = 10f, float tolerance = 0.1f, float step = 0.01f)
     {
         for (float t = 0; t <= maxT; t += step)
