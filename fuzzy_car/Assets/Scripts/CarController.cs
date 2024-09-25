@@ -7,6 +7,23 @@ using Unity.VisualScripting;
 using Newtonsoft.Json;
 using UnityEngine.Windows;
 
+#region Notes
+
+#region 100 vs 30
+//For 100 Km/h vs 30 km/h Stop Car start position -2.43 , 0 , 280
+//redCarPosition >= 370.0f
+#endregion
+#region 80 vs 30
+//For 80 Km/h vs 30 km/h Stop Car start position -2.43 , 0 , 170
+//redCarPosition >= 250.0f
+#endregion
+
+#region 50 vs 30
+//For 50 Km/h vs 30 km/h Stop Car start position -2.43 , 0 , 170
+//redCarPosition >= 250.0f
+#endregion
+
+#endregion
 public class CarController : MonoBehaviour
 {
     private const string HORIZONTAL = "Horizontal";
@@ -388,11 +405,9 @@ public class CarController : MonoBehaviour
     }
 
     #region Fuzzy
-    private void StartFuzzyCalculations(float frontCarSpeed, float rearCarSpeed) // speeds are m/s
+    private float GetFuzzyResult(float frontCarSpeed, float rearCarSpeed , string jsonPoints) // speeds are m/s
     {
-
         string json = System.IO.File.ReadAllText("Assets//Scripts//FuzzyInference_Fuzzy1_SpeedBased.json");
-        string jsonPoints = System.IO.File.ReadAllText("Assets//Scripts//FuzzyInferencePointList.json");
         var jsonFriendlyDict = JsonConvert.DeserializeObject<Dictionary<int, List<List<float[]>>>>(jsonPoints);
 
         // Step 2: Convert the intermediate structure back into the original Dictionary<int, List<Vector3[]>>
@@ -430,7 +445,7 @@ public class CarController : MonoBehaviour
         if (speedBasedFuzzyData == null)
         {
             Debug.LogError("Failed to deserialize JSON data.");
-            return;
+            return -1.0f;
         }
         // Example: Accessing output values
         List<float> outputValues = speedBasedFuzzyData.Output.Values;
@@ -443,40 +458,41 @@ public class CarController : MonoBehaviour
 
         Dictionary<int, List<float>> outs = new Dictionary<int, List<float>>() { { 1, new List<float>() }, { 2, new List<float>() } };
         Dictionary<int, float> inputTestValues = new Dictionary<int, float>() { { 1, 0 }, { 2, 0 } };
-        inputTestValues[1] = Math.Abs(frontCarSpeed * 3.6f - rearCarSpeed * 3.6f); // km/hr or m/s
-        inputTestValues[2] = (frontCarSpeed * 3.6f + rearCarSpeed * 3.6f) / 2; // km/hr or m/s
+        inputTestValues[2] = Math.Abs(frontCarSpeed * 3.6f - rearCarSpeed * 3.6f); // km/hr or m/s
+        inputTestValues[1] = (frontCarSpeed * 3.6f + rearCarSpeed * 3.6f) / 2; // km/hr or m/s
         print("Input 1 : " + inputTestValues[1] + "---  Input 2 : " + inputTestValues[2]);
         for (int k = 0; k < 2; k++)
         {
             var inputID = k + 1;
-            foreach (var inputEntry in speedBasedFuzzyData.Inputs)
-            {
-                string inputName = inputEntry.Key;
-                InputFuzzy input = inputEntry.Value;
-
-                foreach (var membershipEntry in input.Memberships)
-                {
-                    string membershipName = membershipEntry.Key;
-                    Membership membership = membershipEntry.Value;
-
-                    outs[inputID].Add(CalculateFiring(membership.xPoints.ToArray(), membership.yPoints.ToArray(), inputTestValues[inputID]));
-                }
-            }
-            //for (int l = 0; l < 3; l++)
+            //foreach (var inputEntry in speedBasedFuzzyData.Inputs)
             //{
-            //    List<float> xPoints = new List<float>();
-            //    List<float> yPoints = new List<float>();
-            //    for (int m = 0; m < 3; m++)
+            //    string inputName = inputEntry.Key;
+            //    InputFuzzy input = inputEntry.Value;
+
+            //    foreach (var membershipEntry in input.Memberships)
             //    {
-            //        xPoints.Add(pointLists[inputID][l][m].x);
-            //        yPoints.Add(pointLists[inputID][l][m].y);
+            //        string membershipName = membershipEntry.Key;
+            //        Membership membership = membershipEntry.Value;
+
+            //        outs[inputID].Add(CalculateFiring(membership.xPoints.ToArray(), membership.yPoints.ToArray(), inputTestValues[inputID]));
             //    }
-            //    outs[inputID].Add(CalculateFiring(xPoints.ToArray(), yPoints.ToArray(), inputTestValues[inputID]));
             //}
+            for (int l = 0; l < 3; l++)
+            {
+                List<float> xPoints = new List<float>();
+                List<float> yPoints = new List<float>();
+                for (int m = 0; m < 3; m++)
+                {
+                    xPoints.Add(pointLists[inputID][l][m].x);
+                    yPoints.Add(pointLists[inputID][l][m].y);
+                }
+                outs[inputID].Add(CalculateFiring(xPoints.ToArray(), yPoints.ToArray(), inputTestValues[inputID]));
+            }
         }
         float[,] array = ConvertTo2DArray(ruleTable);
         float outputTest = CalculateFuzzy(array, outs);
         Debug.Log("Fuzzy output : " + outputTest);
+        return outputTest;
 
     }
     private float CalculateFiring(float[] points_x, float[] points_y, float input)
@@ -551,16 +567,41 @@ public class CarController : MonoBehaviour
         {
             if (!isTiming)
             {
-                float calculatedCrashVelocityOnBlueCar = CalculateCollisionSpeedOnBlueCar();
+                float calculatedCrashVelocityOnBlueCar = CalculateCollisionSpeedOnBlueCar(rb.velocity.z, blueCarSpeed, Mathf.Abs(blueCar.transform.position.z - transform.position.z) - 4.8f);
                 if (calculatedCrashVelocityOnBlueCar > 0.00f)
-                    StartFuzzyCalculations(blueCarSpeed, calculatedCrashVelocityOnBlueCar);
+                {
+                    string jsonPoints = System.IO.File.ReadAllText("Assets//Scripts//30-80PointList.json");
+                    float stayInLaneFuzzy = GetFuzzyResult(blueCarSpeed, calculatedCrashVelocityOnBlueCar, jsonPoints);
+
+
+                    string jsonPointsChangeLane = System.IO.File.ReadAllText("Assets//Scripts//120-80PointList.json"); //33.33f, rb.velocity.z, 10f
+                    float calculatedCrashVelocityOnEgoCar = CalculateCollisionSpeedOnBlueCar(33.33f, rb.velocity.z, 10f);
+                    if(calculatedCrashVelocityOnEgoCar < 0.0f)
+                    {
+                        print("No crash on Lane Change");
+                        return;
+                    }
+
+                    float changeLaneFuzzy = GetFuzzyResult(rb.velocity.z, calculatedCrashVelocityOnEgoCar, jsonPointsChangeLane);
+
+                    if(changeLaneFuzzy > stayInLaneFuzzy)
+                    {
+                        print("STAY LANE !!");
+                    }
+                    else
+                    {
+                        print("CHANGE LANE !!");
+                    }
+
+                }
+                    
 
             }
         }
 
     }
 
-    private float CalculateCollisionSpeedOnBlueCar()
+    private float CalculateCollisionSpeedOnBlueCar(float rearCarSpeed, float frontCarSpeed, float distance)
     {
         isTiming = true;
         //float t = (System.Math.Abs((float)transform.position.z - (float)blueCar.transform.position.z) - 4.34f) / (rb.velocity.magnitude - (30.0f / 3.6f));
@@ -573,12 +614,12 @@ public class CarController : MonoBehaviour
         //print("Distance : " + d_initial);
 
         float a_red = -5.75f; // Deceleration of the red car in m/s²
-        float v_red_initial = rb.velocity.z; // Initial velocity of the red car in m/s
+        float v_red_initial = rearCarSpeed; // Initial velocity of the red car in m/s
                                              //print("Red speed : " + v_red_initial + " m/s --- " + v_red_initial * 3.6f + " km/h"); // Red speed : 27.79093 m/s --- 100.0473 km/h
-        float v_blue_initial = blueCarSpeed; //8.56f; //30.0f / 3.6f; //30.0f / 3.6f; //blueCarSpeed + 0.08f; //30.0f / 3.6f; //blueCarSpeed; //30.0f / 3.6f; // Initial velocity of the blue car in m/s (30 km/h)
+        float v_blue_initial = frontCarSpeed; //8.56f; //30.0f / 3.6f; //30.0f / 3.6f; //blueCarSpeed + 0.08f; //30.0f / 3.6f; //blueCarSpeed; //30.0f / 3.6f; // Initial velocity of the blue car in m/s (30 km/h)
                                              //print("Blue car speed : " + blueCarSpeed * 3.6f);
                                              //print("Angle : " + blueCar.transform.rotation.y);
-        float d_initial = Mathf.Abs(blueCar.transform.position.z - transform.position.z) - 4.8f; //- (2.17f +1.98f); // Initial distance car center position difference
+        float d_initial = distance; //- (2.17f +1.98f); // Initial distance car center position difference
                                                                                                  //print("Red car pos : " + transform.position.z);
                                                                                                  //print("Blue car pos : " + blueCar.transform.position.z);
                                                                                                  //print("Distance : " + d_initial);
@@ -674,14 +715,14 @@ public class CarController : MonoBehaviour
     public void StopTimer()
     {
         isTiming = false; // Stop the timer
-        print("Timer stopped at: " + timer + " seconds.");
-        print("Crash velocity of red car: " + previousSpeed + " m/s---- " + previousSpeed * 3.6f + " km/h");
-        //print("Crash velocity of red car: " + rb.velocity.magnitude + " m/s---- " + rb.velocity.magnitude * 3.6f + " km/h");
-        print("Average Acc : " + totalAcc / accCounter); // -5.07
-        print("Average Blue Car Speed : " + totalBlueCarSpeed / accCounter); // 7.92
-        print("Time ellapsed : " + Time.fixedDeltaTime * accCounter);
-        float distance = Mathf.Abs(blueCar.transform.position.z - transform.position.z) - 4.34f;
-        print("Distance : " + distance); // 0.399
+        //print("Timer stopped at: " + timer + " seconds.");
+        //print("Crash velocity of red car: " + previousSpeed + " m/s---- " + previousSpeed * 3.6f + " km/h");
+        ////print("Crash velocity of red car: " + rb.velocity.magnitude + " m/s---- " + rb.velocity.magnitude * 3.6f + " km/h");
+        //print("Average Acc : " + totalAcc / accCounter); // -5.07
+        //print("Average Blue Car Speed : " + totalBlueCarSpeed / accCounter); // 7.92
+        //print("Time ellapsed : " + Time.fixedDeltaTime * accCounter);
+        //float distance = Mathf.Abs(blueCar.transform.position.z - transform.position.z) - 4.34f;
+        //print("Distance : " + distance); // 0.399
         //print("Fixed Delta Time : " + Time.fixedDeltaTime); // 0.02
     }
     #endregion

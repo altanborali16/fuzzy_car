@@ -203,7 +203,11 @@ public class CarControllerForStopCar : MonoBehaviour
                 frontLeftWheelCollider.motorTorque = verticalInput * motorForce;
                 frontRightWheelCollider.motorTorque = verticalInput * motorForce;
             }
-            if (redCarPosition >= 370.0f)
+            //if (redCarPosition >= 370.0f) 100kmH
+            //    StartLaneChange(1);
+            //if (redCarPosition >= 250.0f)  80kmh
+            //    StartLaneChange(1);
+            if (redCarPosition >= 250.0f)
                 StartLaneChange(1);
         }
     }

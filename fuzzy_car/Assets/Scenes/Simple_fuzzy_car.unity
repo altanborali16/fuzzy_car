@@ -2849,7 +2849,7 @@ MonoBehaviour:
   accelerationText: {fileID: 1025525960}
   distanceText: {fileID: 769206434}
   accelerationRate: 200
-  maxSpeed: 100
+  maxSpeed: 50
   blueCarSppedText: {fileID: 808213427}
   blueCar: {fileID: 292112174}
   frontPosition: {fileID: 1712197255}
@@ -3363,7 +3363,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6948587442945639655, guid: e9be6b9d71ce20345b55b654f6eca5d9, type: 3}
       propertyPath: m_LocalPosition.z
-      value: 280
+      value: 110
       objectReference: {fileID: 0}
     - target: {fileID: 6948587442945639655, guid: e9be6b9d71ce20345b55b654f6eca5d9, type: 3}
       propertyPath: m_LocalRotation.w
