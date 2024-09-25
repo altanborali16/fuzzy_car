@@ -388,52 +388,68 @@ public class CarController : MonoBehaviour
     }
 
     #region Fuzzy
-    private void StartFuzzyCalculations(float calculatedCrashVelocityOnBlueCar)
+    private void StartFuzzyCalculations(float frontCarSpeed, float rearCarSpeed) // speeds are m/s
     {
+
         string json = System.IO.File.ReadAllText("Assets//Scripts//FuzzyInference_Fuzzy1_SpeedBased.json");
-        FuzzyData data = JsonConvert.DeserializeObject<FuzzyData>(json);
-        if (data == null)
+        string jsonPoints = System.IO.File.ReadAllText("Assets//Scripts//FuzzyInferencePointList.json");
+        var jsonFriendlyDict = JsonConvert.DeserializeObject<Dictionary<int, List<List<float[]>>>>(jsonPoints);
+
+        // Step 2: Convert the intermediate structure back into the original Dictionary<int, List<Vector3[]>>
+        Dictionary<int, List<Vector3[]>> pointLists = new Dictionary<int, List<Vector3[]>>();
+
+        foreach (var kvp in jsonFriendlyDict)
+        {
+            List<Vector3[]> vector3ArraysList = new List<Vector3[]>();
+            foreach (var vectorsAsArrays in kvp.Value)
+            {
+                Vector3[] vector3Array = new Vector3[vectorsAsArrays.Count];
+                for (int i = 0; i < vectorsAsArrays.Count; i++)
+                {
+                    float[] vectorAsArray = vectorsAsArrays[i];
+                    vector3Array[i] = new Vector3(vectorAsArray[0], vectorAsArray[1], vectorAsArray[2]);
+                }
+                vector3ArraysList.Add(vector3Array);
+            }
+            pointLists[kvp.Key] = vector3ArraysList;
+        }
+
+        // Output the deserialized data to check correctness
+        foreach (var kvp in pointLists)
+        {
+            Console.WriteLine($"Key: {kvp.Key}");
+            foreach (var vectorArray in kvp.Value)
+            {
+                foreach (var vector in vectorArray)
+                {
+                    Console.WriteLine($"Vector3: {vector}");
+                }
+            }
+        }
+        FuzzyData speedBasedFuzzyData = JsonConvert.DeserializeObject<FuzzyData>(json);
+        if (speedBasedFuzzyData == null)
         {
             Debug.LogError("Failed to deserialize JSON data.");
             return;
         }
         // Example: Accessing output values
-        List<float> outputValues = data.Output.Values;
-        List<string> outputLabels = data.Output.Labels;
-        List<List<float>> ruleTable = data.Output.RuleTable;
+        List<float> outputValues = speedBasedFuzzyData.Output.Values;
+        List<string> outputLabels = speedBasedFuzzyData.Output.Labels;
+        List<List<float>> ruleTable = speedBasedFuzzyData.Output.RuleTable;
 
         //// Process output values
-        //Debug.Log("Output Values: " + string.Join(", ", outputValues));
-        //Debug.Log("Output Labels: " + string.Join(", ", outputLabels));
-
-        //// Example: Accessing inputs and memberships
-        //foreach (var inputEntry in data.Inputs)
-        //{
-        //    string inputName = inputEntry.Key;
-        //    InputFuzzy input = inputEntry.Value;
-        //    Debug.Log("Input: " + inputName);
-
-        //    foreach (var membershipEntry in input.Memberships)
-        //    {
-        //        string membershipName = membershipEntry.Key;
-        //        Membership membership = membershipEntry.Value;
-
-        //        Debug.Log($"Membership: {membershipName} - Label: {membership.Label}");
-        //        Debug.Log("X Points: " + string.Join(", ", membership.xPoints));
-        //        Debug.Log("Y Points: " + string.Join(", ", membership.yPoints));
-        //    }
-        //}
 
         Debug.Log("Fuzzy inference data imported successfully.");
 
-        Dictionary<int, List<float>> outs = new Dictionary<int, List<float>>() {{1, new List<float>()}, {2, new List<float>()}};
+        Dictionary<int, List<float>> outs = new Dictionary<int, List<float>>() { { 1, new List<float>() }, { 2, new List<float>() } };
         Dictionary<int, float> inputTestValues = new Dictionary<int, float>() { { 1, 0 }, { 2, 0 } };
-        inputTestValues[1] = Math.Abs(blueCarSpeed * 3.6f - calculatedCrashVelocityOnBlueCar * 3.6f); // km/hr or m/s
-        inputTestValues[0] = (blueCarSpeed * 3.6f + calculatedCrashVelocityOnBlueCar * 3.6f) / 2; // km/hr or m/s
+        inputTestValues[1] = Math.Abs(frontCarSpeed * 3.6f - rearCarSpeed * 3.6f); // km/hr or m/s
+        inputTestValues[2] = (frontCarSpeed * 3.6f + rearCarSpeed * 3.6f) / 2; // km/hr or m/s
+        print("Input 1 : " + inputTestValues[1] + "---  Input 2 : " + inputTestValues[2]);
         for (int k = 0; k < 2; k++)
         {
             var inputID = k + 1;
-            foreach (var inputEntry in data.Inputs)
+            foreach (var inputEntry in speedBasedFuzzyData.Inputs)
             {
                 string inputName = inputEntry.Key;
                 InputFuzzy input = inputEntry.Value;
@@ -443,12 +459,20 @@ public class CarController : MonoBehaviour
                     string membershipName = membershipEntry.Key;
                     Membership membership = membershipEntry.Value;
 
-                    //Debug.Log($"Membership: {membershipName} - Label: {membership.Label}");
-                    //Debug.Log("X Points: " + string.Join(", ", membership.xPoints));
-                    //Debug.Log("Y Points: " + string.Join(", ", membership.yPoints));
                     outs[inputID].Add(CalculateFiring(membership.xPoints.ToArray(), membership.yPoints.ToArray(), inputTestValues[inputID]));
                 }
             }
+            //for (int l = 0; l < 3; l++)
+            //{
+            //    List<float> xPoints = new List<float>();
+            //    List<float> yPoints = new List<float>();
+            //    for (int m = 0; m < 3; m++)
+            //    {
+            //        xPoints.Add(pointLists[inputID][l][m].x);
+            //        yPoints.Add(pointLists[inputID][l][m].y);
+            //    }
+            //    outs[inputID].Add(CalculateFiring(xPoints.ToArray(), yPoints.ToArray(), inputTestValues[inputID]));
+            //}
         }
         float[,] array = ConvertTo2DArray(ruleTable);
         float outputTest = CalculateFuzzy(array, outs);
@@ -527,9 +551,9 @@ public class CarController : MonoBehaviour
         {
             if (!isTiming)
             {
-                float calculatedCrashVelocityOnBlueCar =  CalculateCollisionSpeedOnBlueCar();
+                float calculatedCrashVelocityOnBlueCar = CalculateCollisionSpeedOnBlueCar();
                 if (calculatedCrashVelocityOnBlueCar > 0.00f)
-                    StartFuzzyCalculations(calculatedCrashVelocityOnBlueCar);
+                    StartFuzzyCalculations(blueCarSpeed, calculatedCrashVelocityOnBlueCar);
 
             }
         }
@@ -655,7 +679,7 @@ public class CarController : MonoBehaviour
         //print("Crash velocity of red car: " + rb.velocity.magnitude + " m/s---- " + rb.velocity.magnitude * 3.6f + " km/h");
         print("Average Acc : " + totalAcc / accCounter); // -5.07
         print("Average Blue Car Speed : " + totalBlueCarSpeed / accCounter); // 7.92
-        print("Time ellapsed : " + Time.fixedDeltaTime * accCounter); 
+        print("Time ellapsed : " + Time.fixedDeltaTime * accCounter);
         float distance = Mathf.Abs(blueCar.transform.position.z - transform.position.z) - 4.34f;
         print("Distance : " + distance); // 0.399
         //print("Fixed Delta Time : " + Time.fixedDeltaTime); // 0.02
