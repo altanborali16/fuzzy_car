@@ -1,0 +1,119 @@
+{
+  "Inputs": {
+    "Input1": {
+      "Memberships": {
+        "Membership1": {
+          "xPoints": [
+            0.0,
+            0.25,
+            0.5
+          ],
+          "yPoints": [
+            1.0,
+            1.0,
+            0.0
+          ],
+          "Label": "Az"
+        },
+        "Membership2": {
+          "xPoints": [
+            0.25,
+            0.5,
+            0.75
+          ],
+          "yPoints": [
+            0.0,
+            1.0,
+            0.0
+          ],
+          "Label": "Orta"
+        },
+        "Membership3": {
+          "xPoints": [
+            0.5,
+            0.75,
+            1.0
+          ],
+          "yPoints": [
+            0.0,
+            1.0,
+            1.0
+          ],
+          "Label": "Çok"
+        }
+      }
+    },
+    "Input2": {
+      "Memberships": {
+        "Membership1": {
+          "xPoints": [
+            0.0,
+            1.0,
+            2.0
+          ],
+          "yPoints": [
+            1.0,
+            1.0,
+            0.0
+          ],
+          "Label": "Küçük"
+        },
+        "Membership2": {
+          "xPoints": [
+            1.0,
+            2.0,
+            3.0
+          ],
+          "yPoints": [
+            0.0,
+            1.0,
+            0.0
+          ],
+          "Label": "Orta"
+        },
+        "Membership3": {
+          "xPoints": [
+            2.0,
+            3.0,
+            4.0
+          ],
+          "yPoints": [
+            0.0,
+            1.0,
+            1.0
+          ],
+          "Label": "Büyük"
+        }
+      }
+    }
+  },
+  "Output": {
+    "Values": [
+      0.35,
+      0.65,
+      1.0
+    ],
+    "Labels": [
+      "Az",
+      "Orta",
+      "Çok"
+    ],
+    "RuleTable": [
+      [
+        0.65,
+        1.0,
+        1.0
+      ],
+      [
+        0.35,
+        0.65,
+        1.0
+      ],
+      [
+        0.35,
+        0.35,
+        0.65
+      ]
+    ]
+  }
+}

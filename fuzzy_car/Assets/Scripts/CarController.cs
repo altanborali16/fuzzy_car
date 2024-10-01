@@ -19,7 +19,7 @@ using UnityEngine.Windows;
 #endregion
 
 #region 50 vs 30
-//For 50 Km/h vs 30 km/h Stop Car start position -2.43 , 0 , 170
+//For 50 Km/h vs 30 km/h Stop Car start position -2.43 , 0 , 110
 //redCarPosition >= 250.0f
 #endregion
 
@@ -454,12 +454,12 @@ public class CarController : MonoBehaviour
 
         //// Process output values
 
-        Debug.Log("Fuzzy inference data imported successfully.");
+        //Debug.Log("Fuzzy inference data imported successfully.");
 
         Dictionary<int, List<float>> outs = new Dictionary<int, List<float>>() { { 1, new List<float>() }, { 2, new List<float>() } };
         Dictionary<int, float> inputTestValues = new Dictionary<int, float>() { { 1, 0 }, { 2, 0 } };
-        inputTestValues[2] = Math.Abs(frontCarSpeed * 3.6f - rearCarSpeed * 3.6f); // km/hr or m/s
-        inputTestValues[1] = (frontCarSpeed * 3.6f + rearCarSpeed * 3.6f) / 2; // km/hr or m/s
+        inputTestValues[1] = Math.Abs(frontCarSpeed * 3.6f - rearCarSpeed * 3.6f); // km/hr or m/s
+        inputTestValues[2] = (frontCarSpeed * 3.6f + rearCarSpeed * 3.6f) / 2; // km/hr or m/s
         print("Input 1 : " + inputTestValues[1] + "---  Input 2 : " + inputTestValues[2]);
         for (int k = 0; k < 2; k++)
         {
@@ -491,7 +491,7 @@ public class CarController : MonoBehaviour
         }
         float[,] array = ConvertTo2DArray(ruleTable);
         float outputTest = CalculateFuzzy(array, outs);
-        Debug.Log("Fuzzy output : " + outputTest);
+        //Debug.Log("Fuzzy output : " + outputTest);
         return outputTest;
 
     }
@@ -567,30 +567,36 @@ public class CarController : MonoBehaviour
         {
             if (!isTiming)
             {
-                float calculatedCrashVelocityOnBlueCar = CalculateCollisionSpeedOnBlueCar(rb.velocity.z, blueCarSpeed, Mathf.Abs(blueCar.transform.position.z - transform.position.z) - 4.8f);
+                float calculatedCrashVelocityOnBlueCar = CalculateCollisionSpeed(rb.velocity.z, blueCarSpeed, Mathf.Abs(blueCar.transform.position.z - transform.position.z) - 4.8f);
+                print("Boş satır");
+                print("EGO aracının öndeki arabaya çarpma hızı : " + calculatedCrashVelocityOnBlueCar * 3.6f + " km/sa olarak hesaplanmıştır.");
                 if (calculatedCrashVelocityOnBlueCar > 0.00f)
                 {
-                    string jsonPoints = System.IO.File.ReadAllText("Assets//Scripts//30-80PointList.json");
+                    //string jsonPoints = System.IO.File.ReadAllText("Assets//Scripts//30-80PointList.json");
+                    string jsonPoints = System.IO.File.ReadAllText("Assets//Scripts//30-50PointList.json");
                     float stayInLaneFuzzy = GetFuzzyResult(blueCarSpeed, calculatedCrashVelocityOnBlueCar, jsonPoints);
+                    print("Şeritte kalırsa bulanık karar verme faz 1 sonucu : " + stayInLaneFuzzy);
 
 
                     string jsonPointsChangeLane = System.IO.File.ReadAllText("Assets//Scripts//120-80PointList.json"); //33.33f, rb.velocity.z, 10f
-                    float calculatedCrashVelocityOnEgoCar = CalculateCollisionSpeedOnBlueCar(33.33f, rb.velocity.z, 10f);
-                    if(calculatedCrashVelocityOnEgoCar < 0.0f)
+                    float calculatedCrashVelocityOnEgoCar = CalculateCollisionSpeed(25f, rb.velocity.z, 10f); //33.33f - 120
+                    print("EGO aracına arkadaki arabanın çarpma hızı : " + calculatedCrashVelocityOnEgoCar * 3.6f + " km/sa olarak hesaplanmıştır.");
+                    if (calculatedCrashVelocityOnEgoCar < 0.0f)
                     {
                         print("No crash on Lane Change");
                         return;
                     }
 
                     float changeLaneFuzzy = GetFuzzyResult(rb.velocity.z, calculatedCrashVelocityOnEgoCar, jsonPointsChangeLane);
+                    print("Şerit değiştirirse bulanık karar verme faz 1 sonucu : " + changeLaneFuzzy);
 
-                    if(changeLaneFuzzy > stayInLaneFuzzy)
+                    if (changeLaneFuzzy > stayInLaneFuzzy)
                     {
-                        print("STAY LANE !!");
+                        print("Şeritte kal");
                     }
                     else
                     {
-                        print("CHANGE LANE !!");
+                        print("Şerit değiştir");
                     }
 
                 }
@@ -601,7 +607,7 @@ public class CarController : MonoBehaviour
 
     }
 
-    private float CalculateCollisionSpeedOnBlueCar(float rearCarSpeed, float frontCarSpeed, float distance)
+    private float CalculateCollisionSpeed(float rearCarSpeed, float frontCarSpeed, float distance)
     {
         isTiming = true;
         //float t = (System.Math.Abs((float)transform.position.z - (float)blueCar.transform.position.z) - 4.34f) / (rb.velocity.magnitude - (30.0f / 3.6f));
@@ -648,8 +654,8 @@ public class CarController : MonoBehaviour
             float crashVelocity = v_red_initial + a_red * t;
             //float crashSpeed = Mathf.Abs(crashVelocity); // Ensure it's positive
 
-            print("Calcucalted Time until collision: " + t + " seconds");
-            print("Calculated Crash speed of red car: " + crashVelocity + " m/s ---- " + crashVelocity * 3.6f + " km/h");
+            //print("Calcucalted Time until collision: " + t + " seconds");
+            //print("Calculated Crash speed of red car: " + crashVelocity + " m/s ---- " + crashVelocity * 3.6f + " km/h");
             return crashVelocity;
         }
         else

@@ -787,7 +787,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 2792218741957914664, guid: 133308cdb8794744caaef026bde9e1f0, type: 3}
       propertyPath: m_LocalPosition.z
-      value: -0.000014906749
+      value: 120
       objectReference: {fileID: 0}
     - target: {fileID: 2792218741957914664, guid: 133308cdb8794744caaef026bde9e1f0, type: 3}
       propertyPath: m_LocalRotation.w
@@ -819,14 +819,88 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 3311311803080157842, guid: 133308cdb8794744caaef026bde9e1f0, type: 3}
       propertyPath: m_Name
-      value: Free Racing Car
+      value: Free Racing Car Yellow
       objectReference: {fileID: 0}
     - target: {fileID: 7495443279060062592, guid: 133308cdb8794744caaef026bde9e1f0, type: 3}
       propertyPath: m_Drag
       value: 0.05
       objectReference: {fileID: 0}
+    - target: {fileID: 7495443279060062592, guid: 133308cdb8794744caaef026bde9e1f0, type: 3}
+      propertyPath: m_AngularDrag
+      value: 0.05
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 133308cdb8794744caaef026bde9e1f0, type: 3}
+--- !u!1 &298280336 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 3311311803080157842, guid: 133308cdb8794744caaef026bde9e1f0, type: 3}
+  m_PrefabInstance: {fileID: 298280335}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &298280337
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 298280336}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 330153401ea31114d83f6ac184ec2f14, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  motorForce: 1000
+  breakForce: 4000
+  maxSteerAngle: 35
+  frontLeftWheelCollider: {fileID: 298280345}
+  frontRightWheelCollider: {fileID: 298280344}
+  rearLeftWheelCollider: {fileID: 298280343}
+  rearRightWheelCollider: {fileID: 298280342}
+  frontLeftWheelTransform: {fileID: 298280341}
+  frontRightWheeTransform: {fileID: 298280340}
+  rearLeftWheelTransform: {fileID: 298280339}
+  rearRightWheelTransform: {fileID: 298280338}
+  accelerationRate: 200
+  maxSpeed: 30
+--- !u!4 &298280338 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 28636839611146925, guid: 133308cdb8794744caaef026bde9e1f0, type: 3}
+  m_PrefabInstance: {fileID: 298280335}
+  m_PrefabAsset: {fileID: 0}
+--- !u!4 &298280339 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 9188640840458259854, guid: 133308cdb8794744caaef026bde9e1f0, type: 3}
+  m_PrefabInstance: {fileID: 298280335}
+  m_PrefabAsset: {fileID: 0}
+--- !u!4 &298280340 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 948405438201742482, guid: 133308cdb8794744caaef026bde9e1f0, type: 3}
+  m_PrefabInstance: {fileID: 298280335}
+  m_PrefabAsset: {fileID: 0}
+--- !u!4 &298280341 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 3794951908810334882, guid: 133308cdb8794744caaef026bde9e1f0, type: 3}
+  m_PrefabInstance: {fileID: 298280335}
+  m_PrefabAsset: {fileID: 0}
+--- !u!146 &298280342 stripped
+WheelCollider:
+  m_CorrespondingSourceObject: {fileID: 1057494946909100755, guid: 133308cdb8794744caaef026bde9e1f0, type: 3}
+  m_PrefabInstance: {fileID: 298280335}
+  m_PrefabAsset: {fileID: 0}
+--- !u!146 &298280343 stripped
+WheelCollider:
+  m_CorrespondingSourceObject: {fileID: 3145262460232535540, guid: 133308cdb8794744caaef026bde9e1f0, type: 3}
+  m_PrefabInstance: {fileID: 298280335}
+  m_PrefabAsset: {fileID: 0}
+--- !u!146 &298280344 stripped
+WheelCollider:
+  m_CorrespondingSourceObject: {fileID: 4795950753765878369, guid: 133308cdb8794744caaef026bde9e1f0, type: 3}
+  m_PrefabInstance: {fileID: 298280335}
+  m_PrefabAsset: {fileID: 0}
+--- !u!146 &298280345 stripped
+WheelCollider:
+  m_CorrespondingSourceObject: {fileID: 2716459193614891142, guid: 133308cdb8794744caaef026bde9e1f0, type: 3}
+  m_PrefabInstance: {fileID: 298280335}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &381092481
 GameObject:
   m_ObjectHideFlags: 0
@@ -4639,6 +4713,10 @@ PrefabInstance:
       propertyPath: m_Drag
       value: 0.05
       objectReference: {fileID: 0}
+    - target: {fileID: 1858005172513079971, guid: 62010132604e8c94d96b4cb4fe6d3394, type: 3}
+      propertyPath: m_AngularDrag
+      value: 0.05
+      objectReference: {fileID: 0}
     - target: {fileID: 6301142851818038027, guid: 62010132604e8c94d96b4cb4fe6d3394, type: 3}
       propertyPath: m_RootOrder
       value: 1
@@ -4653,7 +4731,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6301142851818038027, guid: 62010132604e8c94d96b4cb4fe6d3394, type: 3}
       propertyPath: m_LocalPosition.z
-      value: -15
+      value: -19.25
       objectReference: {fileID: 0}
     - target: {fileID: 6301142851818038027, guid: 62010132604e8c94d96b4cb4fe6d3394, type: 3}
       propertyPath: m_LocalRotation.w
@@ -4685,10 +4763,80 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6645616114513181105, guid: 62010132604e8c94d96b4cb4fe6d3394, type: 3}
       propertyPath: m_Name
-      value: Free Racing Car Purple Variant
+      value: Free Racing Car Purple
       objectReference: {fileID: 0}
     m_RemovedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 62010132604e8c94d96b4cb4fe6d3394, type: 3}
+--- !u!1 &2061520852 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 6645616114513181105, guid: 62010132604e8c94d96b4cb4fe6d3394, type: 3}
+  m_PrefabInstance: {fileID: 2061520851}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &2061520853
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2061520852}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 330153401ea31114d83f6ac184ec2f14, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  motorForce: 1000
+  breakForce: 4000
+  maxSteerAngle: 35
+  frontLeftWheelCollider: {fileID: 2061520861}
+  frontRightWheelCollider: {fileID: 2061520860}
+  rearLeftWheelCollider: {fileID: 2061520859}
+  rearRightWheelCollider: {fileID: 2061520858}
+  frontLeftWheelTransform: {fileID: 2061520857}
+  frontRightWheeTransform: {fileID: 2061520856}
+  rearLeftWheelTransform: {fileID: 2061520855}
+  rearRightWheelTransform: {fileID: 2061520854}
+  accelerationRate: 200
+  maxSpeed: 50
+--- !u!4 &2061520854 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 8189902724596167054, guid: 62010132604e8c94d96b4cb4fe6d3394, type: 3}
+  m_PrefabInstance: {fileID: 2061520851}
+  m_PrefabAsset: {fileID: 0}
+--- !u!4 &2061520855 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 1029424385018338989, guid: 62010132604e8c94d96b4cb4fe6d3394, type: 3}
+  m_PrefabInstance: {fileID: 2061520851}
+  m_PrefabAsset: {fileID: 0}
+--- !u!4 &2061520856 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 8999517617804646321, guid: 62010132604e8c94d96b4cb4fe6d3394, type: 3}
+  m_PrefabInstance: {fileID: 2061520851}
+  m_PrefabAsset: {fileID: 0}
+--- !u!4 &2061520857 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 5001173205807362433, guid: 62010132604e8c94d96b4cb4fe6d3394, type: 3}
+  m_PrefabInstance: {fileID: 2061520851}
+  m_PrefabAsset: {fileID: 0}
+--- !u!146 &2061520858 stripped
+WheelCollider:
+  m_CorrespondingSourceObject: {fileID: 9178659444073187824, guid: 62010132604e8c94d96b4cb4fe6d3394, type: 3}
+  m_PrefabInstance: {fileID: 2061520851}
+  m_PrefabAsset: {fileID: 0}
+--- !u!146 &2061520859 stripped
+WheelCollider:
+  m_CorrespondingSourceObject: {fileID: 6515560375722041047, guid: 62010132604e8c94d96b4cb4fe6d3394, type: 3}
+  m_PrefabInstance: {fileID: 2061520851}
+  m_PrefabAsset: {fileID: 0}
+--- !u!146 &2061520860 stripped
+WheelCollider:
+  m_CorrespondingSourceObject: {fileID: 3693936736443218242, guid: 62010132604e8c94d96b4cb4fe6d3394, type: 3}
+  m_PrefabInstance: {fileID: 2061520851}
+  m_PrefabAsset: {fileID: 0}
+--- !u!146 &2061520861 stripped
+WheelCollider:
+  m_CorrespondingSourceObject: {fileID: 6088603988529228709, guid: 62010132604e8c94d96b4cb4fe6d3394, type: 3}
+  m_PrefabInstance: {fileID: 2061520851}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &2073404592
 GameObject:
   m_ObjectHideFlags: 0
